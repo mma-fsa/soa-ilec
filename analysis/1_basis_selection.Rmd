@@ -1,0 +1,93 @@
+---
+title: "Data Scratch Pad"
+author: "Mike McPhee Anderson, FSA"
+date: "2025-10-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+library(duckdb)
+library(DBI)
+library(tidyverse)
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Setup Database Connection
+
+```{r}
+
+if (!exists("conn")) {
+    conn <- duckdb::dbConnect(duckdb::duckdb(), ":memory:")
+    dbExecute(conn, "SET memory_limit='16GB'")
+}
+
+tbl_ilec <- tbl(conn, "read_parquet('../data/ilec_2009_19_20210528.parquet')")
+
+tbl_ilec |> colnames()
+
+
+```
+
+## Calculate Log-Likelihood for each business segment & expected basis
+
+The ILEC data has a few expected bases appended to it.  Since there is a good chance
+that at least some of our business segments will have low credibility, we'll need an `offset()` in our R model.
+We'll choose this offset based on the maximum likelihood estimate.
+
+*Technically this should be done with train / test split*, so that the log-likelihood is determined only on the
+basis of training data, but we'll simply here.
+
+```{r}
+
+df_exp_basis <- tbl_ilec %>% 
+  mutate(
+    
+  ) %>% 
+  group_by(Insurance_Plan, Number_Of_Preferred_Classes, Preferred_Class, Smoker_Status, Gender, Attained_Age) %>%  
+  summarise(
+    Number_Of_Deaths = sum(coalesce(Number_Of_Deaths, 0)),
+    Death_Claim_Amount = sum(coalesce(Number_Of_Deaths, 0)),
+    across(starts_with("Expected_Death"), sum, na.rm=T),
+    .groups="drop"
+  ) %>%
+  ungroup() %>%
+  collect() %>%
+  pivot_longer(
+    cols = starts_with("Expected_Death"),
+    names_to =  "Expected_Basis_Name",
+    values_to = "Expected_Basis_Value") %>% 
+  mutate(
+    Actual_Value = case_when(
+      stringr::str_ends(string = Expected_Basis_Name, pattern = "by_Amount") ~ Death_Claim_Amount,
+      stringr::str_ends(string = Expected_Basis_Name, pattern = "by_Policy") ~ Number_Of_Deaths,
+      TRUE ~ NA
+    ),
+    LL = dpois(
+      Actual_Value, Expected_Basis_Value, log=T
+    )
+  ) %>%
+  group_by(
+    Expected_Basis_Name,
+    Insurance_Plan, 
+    Number_Of_Preferred_Classes, 
+    Preferred_Class, 
+    Smoker_Status, 
+    Gender) %>%
+  summarise(
+    total_LL = sum(LL)
+  ) %>%
+  write_csv("../context/analysis/")
+
+df_exp_basis
+
+```
+
+
+```{r}
+
+df_exp_basis
+
+```
+
