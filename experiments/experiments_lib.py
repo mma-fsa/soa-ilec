@@ -52,7 +52,7 @@ async def prompt_ilec_data_async(prompt, model="gpt-5-mini", max_turns=10):
         return result.final_output
     
 # --- robust sync wrapper (works with or without a running loop) ---
-def prompt_ilec_data(prompt: str, max_turns: int = 10) -> str:
+def prompt_ilec_data(prompt: str, max_turns: int = 50) -> str:
     """
     Synchronously run prompt_ilec_data(prompt) and return the model's final output.
     Handles environments that already have an event loop by offloading to a worker thread.

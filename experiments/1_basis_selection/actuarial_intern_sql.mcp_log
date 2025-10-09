@@ -1,0 +1,502 @@
+INFO:     127.0.0.1:53514 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:53514 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53528 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:53536 - "GET /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:53528 - "POST /mcp HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:53536 - "GET /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53540 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:53540 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53542 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:53542 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53558 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:53558 - "POST /mcp HTTP/1.1" 200 OK
+SELECT Insurance_Plan, COUNT(*) AS rows_count
+FROM ILEC_DATA
+GROUP BY Insurance_Plan
+ORDER BY Insurance_Plan
+LIMIT 100;
+
+	query done
+INFO:     127.0.0.1:58730 - "DELETE /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:58730 - "DELETE /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58742 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:58742 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58758 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:58770 - "GET /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:58758 - "POST /mcp HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:58770 - "GET /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58786 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:58786 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58802 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:58802 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51080 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:51080 - "POST /mcp HTTP/1.1" 200 OK
+SELECT
+  Insurance_Plan,
+  SUM(Death_Claim_Amount) AS Actual_Amount,
+  SUM(Expected_Death_QX7580E_by_Amount) AS Expected_QX7580E_by_Amount,
+  CASE WHEN SUM(Expected_Death_QX7580E_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_Death_QX7580E_by_Amount) END AS AE_QX7580E,
+
+  SUM(Expected_Death_QX2001VBT_by_Amount) AS Expected_QX2001VBT_by_Amount,
+  CASE WHEN SUM(Expected_Death_QX2001VBT_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2001VBT_by_Amount) END AS AE_QX2001VBT,
+
+  SUM(Expected_Death_QX2008VBT_by_Amount) AS Expected_QX2008VBT_by_Amount,
+  CASE WHEN SUM(Expected_Death_QX2008VBT_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2008VBT_by_Amount) END AS AE_QX2008VBT,
+
+  SUM(Expected_Death_QX2008VBTLU_by_Amount) AS Expected_QX2008VBTLU_by_Amount,
+  CASE WHEN SUM(Expected_Death_QX2008VBTLU_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2008VBTLU_by_Amount) END AS AE_QX2008VBTLU,
+
+  SUM(Expected_Death_QX2015VBT_by_Amount) AS Expected_QX2015VBT_by_Amount,
+  CASE WHEN SUM(Expected_Death_QX2015VBT_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2015VBT_by_Amount) END AS AE_QX2015VBT
+
+FROM ILEC_DATA
+GROUP BY Insurance_Plan
+LIMIT 1000;
+
+	query done
+INFO:     127.0.0.1:50664 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:50664 - "POST /mcp HTTP/1.1" 200 OK
+SELECT
+  SUM(Death_Claim_Amount) AS Actual_Amount,
+  SUM(Expected_Death_QX7580E_by_Amount) AS Expected_QX7580E_by_Amount,
+  CASE WHEN SUM(Expected_Death_QX7580E_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_Death_QX7580E_by_Amount) END AS AE_QX7580E,
+
+  SUM(Expected_Death_QX2001VBT_by_Amount) AS Expected_QX2001VBT_by_Amount,
+  CASE WHEN SUM(Expected_Death_QX2001VBT_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_QX2001VBT_by_Amount) END AS AE_QX2001VBT,
+
+  SUM(Expected_Death_QX2008VBT_by_Amount) AS Expected_QX2008VBT_by_Amount,
+  CASE WHEN SUM(Expected_Death_QX2008VBT_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2008VBT_by_Amount) END AS AE_QX2008VBT,
+
+  SUM(Expected_Death_QX2008VBTLU_by_Amount) AS Expected_QX2008VBTLU_by_Amount,
+  CASE WHEN SUM(Expected_Death_QX2008VBTLU_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_QX2008VBTLU_by_Amount) END AS AE_QX2008VBTLU,
+
+  SUM(Expected_Death_QX2015VBT_by_Amount) AS Expected_QX2015VBT_by_Amount,
+  CASE WHEN SUM(Expected_Death_QX2015VBT_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_QX2015VBT_by_Amount) END AS AE_QX2015VBT
+FROM ILEC_DATA
+LIMIT 1;
+
+	query error
+INFO:     127.0.0.1:40954 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:40954 - "POST /mcp HTTP/1.1" 200 OK
+SELECT
+  SUM(Death_Claim_Amount) AS Actual_Amount,
+  SUM(Expected_Death_QX7580E_by_Amount) AS Expected_QX7580E_by_Amount,
+  CASE WHEN SUM(Expected_Death_QX7580E_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_Death_QX7580E_by_Amount) END AS AE_QX7580E,
+
+  SUM(Expected_Death_QX2001VBT_by_Amount) AS Expected_QX2001VBT_by_Amount,
+  CASE WHEN SUM(Expected_Death_QX2001VBT_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2001VBT_by_Amount) END AS AE_QX2001VBT,
+
+  SUM(Expected_Death_QX2008VBT_by_Amount) AS Expected_QX2008VBT_by_Amount,
+  CASE WHEN SUM(Expected_Death_QX2008VBT_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2008VBT_by_Amount) END AS AE_QX2008VBT,
+
+  SUM(Expected_Death_QX2008VBTLU_by_Amount) AS Expected_QX2008VBTLU_by_Amount,
+  CASE WHEN SUM(Expected_Death_QX2008VBTLU_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2008VBTLU_by_Amount) END AS AE_QX2008VBTLU,
+
+  SUM(Expected_Death_QX2015VBT_by_Amount) AS Expected_QX2015VBT_by_Amount,
+  CASE WHEN SUM(Expected_Death_QX2015VBT_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2015VBT_by_Amount) END AS AE_QX2015VBT
+FROM ILEC_DATA
+LIMIT 1;
+
+	query done
+INFO:     127.0.0.1:58396 - "DELETE /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:58396 - "DELETE /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58410 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:58410 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58426 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:58442 - "GET /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:58426 - "POST /mcp HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:58442 - "GET /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58450 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:58450 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57696 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:57696 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57226 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:57226 - "POST /mcp HTTP/1.1" 200 OK
+SELECT Insurance_Plan,
+ SUM(Death_Claim_Amount) AS Actual,
+ SUM(Expected_Death_QX7580E_by_Amount) AS Exp_QX7580E,
+ SUM(Expected_Death_QX2001VBT_by_Amount) AS Exp_QX2001VBT,
+ SUM(Expected_Death_QX2008VBT_by_Amount) AS Exp_QX2008VBT,
+ SUM(Expected_Death_QX2008VBTLU_by_Amount) AS Exp_QX2008VBTLU,
+ SUM(Expected_Death_QX2015VBT_by_Amount) AS Exp_QX2015VBT
+FROM ILEC_DATA
+GROUP BY Insurance_Plan
+LIMIT 100;
+
+	query done
+INFO:     127.0.0.1:32782 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:32782 - "POST /mcp HTTP/1.1" 200 OK
+SELECT 'QX7580E' AS Basis,
+ SUM(Death_Claim_Amount)/SUM(Expected_Death_QX7580E_by_Amount) AS Overall_AE,
+ SUM(ABS(Death_Claim_Amount - Expected_Death_QX7580E_by_Amount)) / SUM(Expected_Death_QX7580E_by_Amount) AS WAPE,
+ SQRT( SUM( (Death_Claim_Amount - Expected_Death_QX7580E_by_Amount)*(Death_Claim_Amount - Expected_Death_QX7580E_by_Amount) / NULLIF(Expected_Death_QX7580E_by_Amount,0) ) / SUM(Expected_Death_QX7580E_by_Amount) ) AS Weighted_RMSE,
+ SUM( (Death_Claim_Amount - Expected_Death_QX7580E_by_Amount)*(Death_Claim_Amount - Expected_Death_QX7580E_by_Amount) / NULLIF(Expected_Death_QX7580E_by_Amount,0) ) AS Pearson_Chi2
+FROM ILEC_DATA
+UNION ALL
+SELECT 'QX2001VBT' AS Basis,
+ SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2001VBT_by_Amount) AS Overall_AE,
+ SUM(ABS(Death_Claim_Amount - Expected_Death_QX2001VBT_by_Amount)) / SUM(Expected_Death_QX2001VBT_by_Amount) AS WAPE,
+ SQRT( SUM( (Death_Claim_Amount - Expected_Death_QX2001VBT_by_Amount)*(Death_Claim_Amount - Expected_Death_QX2001VBT_by_Amount) / NULLIF(Expected_Death_QX2001VBT_by_Amount,0) ) / SUM(Expected_Death_QX2001VBT_by_Amount) ) AS Weighted_RMSE,
+ SUM( (Death_Claim_Amount - Expected_Death_QX2001VBT_by_Amount)*(Death_Claim_Amount - Expected_Death_QX2001VBT_by_Amount) / NULLIF(Expected_Death_QX2001VBT_by_Amount,0) ) AS Pearson_Chi2
+FROM ILEC_DATA
+UNION ALL
+SELECT 'QX2008VBT' AS Basis,
+ SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2008VBT_by_Amount) AS Overall_AE,
+ SUM(ABS(Death_Claim_Amount - Expected_Death_QX2008VBT_by_Amount)) / SUM(Expected_Death_QX2008VBT_by_Amount) AS WAPE,
+ SQRT( SUM( (Death_Claim_Amount - Expected_Death_QX2008VBT_by_Amount)*(Death_Claim_Amount - Expected_Death_QX2008VBT_by_Amount) / NULLIF(Expected_Death_QX2008VBT_by_Amount,0) ) / SUM(Expected_Death_QX2008VBT_by_Amount) ) AS Weighted_RMSE,
+ SUM( (Death_Claim_Amount - Expected_Death_QX2008VBT_by_Amount)*(Death_Claim_Amount - Expected_Death_QX2008VBT_by_Amount) / NULLIF(Expected_Death_QX2008VBT_by_Amount,0) ) AS Pearson_Chi2
+FROM ILEC_DATA
+UNION ALL
+SELECT 'QX2008VBTLU' AS Basis,
+ SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2008VBTLU_by_Amount) AS Overall_AE,
+ SUM(ABS(Death_Claim_Amount - Expected_Death_QX2008VBTLU_by_Amount)) / SUM(Expected_Death_QX2008VBTLU_by_Amount) AS WAPE,
+ SQRT( SUM( (Death_Claim_Amount - Expected_Death_QX2008VBTLU_by_Amount)*(Death_Claim_Amount - Expected_Death_QX2008VBTLU_by_Amount) / NULLIF(Expected_Death_QX2008VBTLU_by_Amount,0) ) / SUM(Expected_Death_QX2008VBTLU_by_Amount) ) AS Weighted_RMSE,
+ SUM( (Death_Claim_Amount - Expected_Death_QX2008VBTLU_by_Amount)*(Death_Claim_Amount - Expected_Death_QX2008VBTLU_by_Amount) / NULLIF(Expected_Death_QX2008VBTLU_by_Amount,0) ) AS Pearson_Chi2
+FROM ILEC_DATA
+UNION ALL
+SELECT 'QX2015VBT' AS Basis,
+ SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2015VBT_by_Amount) AS Overall_AE,
+ SUM(ABS(Death_Claim_Amount - Expected_Death_QX2015VBT_by_Amount)) / SUM(Expected_Death_QX2015VBT_by_Amount) AS WAPE,
+ SQRT( SUM( (Death_Claim_Amount - Expected_Death_QX2015VBT_by_Amount)*(Death_Claim_Amount - Expected_Death_QX2015VBT_by_Amount) / NULLIF(Expected_Death_QX2015VBT_by_Amount,0) ) / SUM(Expected_Death_QX2015VBT_by_Amount) ) AS Weighted_RMSE,
+ SUM( (Death_Claim_Amount - Expected_Death_QX2015VBT_by_Amount)*(Death_Claim_Amount - Expected_Death_QX2015VBT_by_Amount) / NULLIF(Expected_Death_QX2015VBT_by_Amount,0) ) AS Pearson_Chi2
+FROM ILEC_DATA
+LIMIT 10;
+
+	query done
+INFO:     127.0.0.1:51232 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:51232 - "POST /mcp HTTP/1.1" 200 OK
+SELECT Insurance_Plan, 'QX7580E' AS Basis,
+ SUM(Death_Claim_Amount) AS Actual,
+ SUM(Expected_Death_QX7580E_by_Amount) AS Expected,
+ SUM(Death_Claim_Amount)/SUM(Expected_Death_QX7580E_by_Amount) AS AE
+FROM ILEC_DATA
+GROUP BY Insurance_Plan
+UNION ALL
+SELECT Insurance_Plan, 'QX2001VBT' AS Basis,
+ SUM(Death_Claim_Amount) AS Actual,
+ SUM(Expected_Death_QX2001VBT_by_Amount) AS Expected,
+ SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2001VBT_by_Amount) AS AE
+FROM ILEC_DATA
+GROUP BY Insurance_Plan
+UNION ALL
+SELECT Insurance_Plan, 'QX2008VBT' AS Basis,
+ SUM(Death_Claim_Amount) AS Actual,
+ SUM(Expected_Death_QX2008VBT_by_Amount) AS Expected,
+ SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2008VBT_by_Amount) AS AE
+FROM ILEC_DATA
+GROUP BY Insurance_Plan
+UNION ALL
+SELECT Insurance_Plan, 'QX2008VBTLU' AS Basis,
+ SUM(Death_Claim_Amount) AS Actual,
+ SUM(Expected_Death_QX2008VBTLU_by_Amount) AS Expected,
+ SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2008VBTLU_by_Amount) AS AE
+FROM ILEC_DATA
+GROUP BY Insurance_Plan
+UNION ALL
+SELECT Insurance_Plan, 'QX2015VBT' AS Basis,
+ SUM(Death_Claim_Amount) AS Actual,
+ SUM(Expected_Death_QX2015VBT_by_Amount) AS Expected,
+ SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2015VBT_by_Amount) AS AE
+FROM ILEC_DATA
+GROUP BY Insurance_Plan
+LIMIT 100;
+
+	query done
+INFO:     127.0.0.1:47804 - "DELETE /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:47804 - "DELETE /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56784 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:56784 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56800 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:56812 - "GET /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:56800 - "POST /mcp HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:56812 - "GET /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56826 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:56826 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38242 - "DELETE /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:38242 - "DELETE /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51304 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:51304 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51320 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:51322 - "GET /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:51320 - "POST /mcp HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:51322 - "GET /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51324 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:51324 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51332 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:51332 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41086 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:41086 - "POST /mcp HTTP/1.1" 200 OK
+SELECT Issue_Year, 'QX7580E' AS Basis,
+       SUM(Death_Claim_Amount) AS Actual,
+       SUM(Expected_Death_QX7580E_by_Amount) AS Expected,
+       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0) AS AE
+FROM ILEC_DATA
+GROUP BY Issue_Year
+ORDER BY Issue_Year
+LIMIT 1000;
+
+	query done
+INFO:     127.0.0.1:34018 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:34018 - "POST /mcp HTTP/1.1" 200 OK
+SELECT Issue_Year,
+       SUM(Death_Claim_Amount) AS Actual,
+       SUM(Expected_Death_QX7580E_by_Amount) AS E_QX7580E,
+       SUM(Expected_Death_QX2001VBT_by_Amount) AS E_QX2001VBT,
+       SUM(Expected_Death_QX2008VBT_by_Amount) AS E_QX2008VBT,
+       SUM(Expected_Death_QX2008VBTLU_by_Amount) AS E_QX2008VBTLU,
+       SUM(Expected_Death_QX2015VBT_by_Amount) AS E_QX2015VBT,
+       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0) AS AE_QX7580E,
+       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0) AS AE_QX2001VBT,
+       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0) AS AE_QX2008VBT,
+       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0) AS AE_QX2008VBTLU,
+       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0) AS AE_QX2015VBT
+FROM ILEC_DATA
+GROUP BY Issue_Year
+ORDER BY Issue_Year
+LIMIT 1000;
+
+	query done
+INFO:     127.0.0.1:36220 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:36220 - "POST /mcp HTTP/1.1" 200 OK
+SELECT Issue_Year,
+       SUM(Death_Claim_Amount) AS Actual,
+       SUM(Expected_Death_QX7580E_by_Amount) AS E_QX7580E,
+       SUM(Expected_Death_QX2001VBT_by_Amount) AS E_QX2001VBT,
+       SUM(Expected_Death_QX2008VBT_by_Amount) AS E_QX2008VBT,
+       SUM(Expected_Death_QX2008VBTLU_by_Amount) AS E_QX2008VBTLU,
+       SUM(Expected_Death_QX2015VBT_by_Amount) AS E_QX2015VBT,
+       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0) AS AE_QX7580E,
+       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0) AS AE_QX2001VBT,
+       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0) AS AE_QX2008VBT,
+       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0) AS AE_QX2008VBTLU,
+       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0) AS AE_QX2015VBT,
+       CASE
+         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
+           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1)
+           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1)
+           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1)
+         THEN 'QX2015VBT'
+         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
+           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1)
+           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1)
+         THEN 'QX2008VBT'
+         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
+           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1)
+         THEN 'QX2001VBT'
+         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
+         THEN 'QX2008VBTLU'
+         ELSE 'QX7580E'
+       END AS Best_Basis
+FROM ILEC_DATA
+GROUP BY Issue_Year
+ORDER BY Issue_Year
+LIMIT 1000;
+
+	query done
+INFO:     127.0.0.1:52112 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:52112 - "POST /mcp HTTP/1.1" 200 OK
+SELECT Best_Basis, COUNT(*) AS Num_Issue_Years
+FROM (
+  SELECT Issue_Year,
+       CASE
+         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
+           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1)
+           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1)
+           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1)
+         THEN 'QX2015VBT'
+         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
+           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1)
+           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1)
+         THEN 'QX2008VBT'
+         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
+           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1)
+         THEN 'QX2001VBT'
+         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
+         THEN 'QX2008VBTLU'
+         ELSE 'QX7580E'
+       END AS Best_Basis
+  FROM ILEC_DATA
+  GROUP BY Issue_Year
+) t
+GROUP BY Best_Basis
+ORDER BY Num_Issue_Years DESC;
+
+	query done
+INFO:     127.0.0.1:40286 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:40286 - "POST /mcp HTTP/1.1" 200 OK
+SELECT Issue_Year,
+       CASE
+         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
+           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1)
+           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1)
+           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1)
+         THEN 'QX2015VBT'
+         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
+           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1)
+           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1)
+         THEN 'QX2008VBT'
+         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
+           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1)
+         THEN 'QX2001VBT'
+         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
+         THEN 'QX2008VBTLU'
+         ELSE 'QX7580E'
+       END AS Best_Basis
+FROM ILEC_DATA
+GROUP BY Issue_Year
+HAVING
+  CASE
+         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
+           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1)
+           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1)
+           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1)
+         THEN 'QX2015VBT'
+         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
+           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1)
+           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1)
+         THEN 'QX2008VBT'
+         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
+           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1)
+         THEN 'QX2001VBT'
+         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
+         THEN 'QX2008VBTLU'
+         ELSE 'QX7580E'
+       END <> 'QX2015VBT'
+ORDER BY Issue_Year
+LIMIT 1000;
+
+	query done
+INFO:     127.0.0.1:36802 - "DELETE /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:36802 - "DELETE /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41182 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:41182 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41184 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:41194 - "GET /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:41184 - "POST /mcp HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:41194 - "GET /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41200 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:41200 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38848 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:38848 - "POST /mcp HTTP/1.1" 200 OK
+SELECT Issue_Year,
+  SUM(Death_Claim_Amount) AS Actual,
+  SUM(Expected_Death_QX7580E_by_Amount) AS E_QX7580E,
+  SUM(Expected_Death_QX2001VBT_by_Amount) AS E_QX2001VBT,
+  SUM(Expected_Death_QX2008VBT_by_Amount) AS E_QX2008VBT,
+  SUM(Expected_Death_QX2008VBTLU_by_Amount) AS E_QX2008VBTLU,
+  SUM(Expected_Death_QX2015VBT_by_Amount) AS E_QX2015VBT,
+  SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0) AS AE_QX7580E,
+  SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0) AS AE_QX2001VBT,
+  SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0) AS AE_QX2008VBT,
+  SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0) AS AE_QX2008VBTLU,
+  SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0) AS AE_QX2015VBT
+FROM ILEC_DATA
+GROUP BY Issue_Year
+ORDER BY Issue_Year
+LIMIT 1000;
+
+	query done
+INFO:     127.0.0.1:48664 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:48664 - "POST /mcp HTTP/1.1" 200 OK
+WITH agg AS (
+  SELECT Issue_Year,
+    SUM(Death_Claim_Amount) AS Actual,
+    SUM(Expected_Death_QX7580E_by_Amount) AS E_QX7580E,
+    SUM(Expected_Death_QX2001VBT_by_Amount) AS E_QX2001VBT,
+    SUM(Expected_Death_QX2008VBT_by_Amount) AS E_QX2008VBT,
+    SUM(Expected_Death_QX2008VBTLU_by_Amount) AS E_QX2008VBTLU,
+    SUM(Expected_Death_QX2015VBT_by_Amount) AS E_QX2015VBT,
+    SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0) AS AE_QX7580E,
+    SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0) AS AE_QX2001VBT,
+    SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0) AS AE_QX2008VBT,
+    SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0) AS AE_QX2008VBTLU,
+    SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0) AS AE_QX2015VBT
+  FROM ILEC_DATA
+  GROUP BY Issue_Year
+)
+SELECT Issue_Year, Actual,
+  AE_QX7580E, AE_QX2001VBT, AE_QX2008VBT, AE_QX2008VBTLU, AE_QX2015VBT,
+  CASE
+    WHEN abs(AE_QX2015VBT-1) <= abs(AE_QX2008VBT-1) AND abs(AE_QX2015VBT-1) <= abs(AE_QX2008VBTLU-1) AND abs(AE_QX2015VBT-1) <= abs(AE_QX2001VBT-1) AND abs(AE_QX2015VBT-1) <= abs(AE_QX7580E-1) THEN 'QX2015VBT'
+    WHEN abs(AE_QX2008VBT-1) <= abs(AE_QX2015VBT-1) AND abs(AE_QX2008VBT-1) <= abs(AE_QX2008VBTLU-1) AND abs(AE_QX2008VBT-1) <= abs(AE_QX2001VBT-1) AND abs(AE_QX2008VBT-1) <= abs(AE_QX7580E-1) THEN 'QX2008VBT'
+    WHEN abs(AE_QX2008VBTLU-1) <= abs(AE_QX2015VBT-1) AND abs(AE_QX2008VBTLU-1) <= abs(AE_QX2008VBT-1) AND abs(AE_QX2008VBTLU-1) <= abs(AE_QX2001VBT-1) AND abs(AE_QX2008VBTLU-1) <= abs(AE_QX7580E-1) THEN 'QX2008VBTLU'
+    WHEN abs(AE_QX2001VBT-1) <= abs(AE_QX2015VBT-1) AND abs(AE_QX2001VBT-1) <= abs(AE_QX2008VBT-1) AND abs(AE_QX2001VBT-1) <= abs(AE_QX2008VBTLU-1) AND abs(AE_QX2001VBT-1) <= abs(AE_QX7580E-1) THEN 'QX2001VBT'
+    ELSE 'QX7580E'
+  END AS Best_Basis,
+  LEAST(abs(AE_QX7580E-1), abs(AE_QX2001VBT-1), abs(AE_QX2008VBT-1), abs(AE_QX2008VBTLU-1), abs(AE_QX2015VBT-1)) AS Best_Abs_Dev
+FROM agg
+ORDER BY Issue_Year
+LIMIT 1000;
+
+	query done
+INFO:     127.0.0.1:37410 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:37410 - "POST /mcp HTTP/1.1" 200 OK
+SELECT bin,
+  SUM(Death_Claim_Amount) AS Actual,
+  SUM(CASE WHEN bin = '1906-1924_Early' THEN Expected_Death_QX7580E_by_Amount
+           WHEN bin = '1984-1985' THEN Expected_Death_QX2008VBT_by_Amount
+           ELSE Expected_Death_QX2015VBT_by_Amount END) AS Expected,
+  SUM(Death_Claim_Amount)/NULLIF(SUM(CASE WHEN bin = '1906-1924_Early' THEN Expected_Death_QX7580E_by_Amount
+           WHEN bin = '1984-1985' THEN Expected_Death_QX2008VBT_by_Amount
+           ELSE Expected_Death_QX2015VBT_by_Amount END),0) AS AE
+FROM (
+  SELECT *,
+    CASE
+      WHEN Issue_Year BETWEEN 1906 AND 1924 THEN '1906-1924_Early'
+      WHEN Issue_Year BETWEEN 1925 AND 1969 THEN '1925-1969'
+      WHEN Issue_Year BETWEEN 1970 AND 1983 THEN '1970-1983'
+      WHEN Issue_Year BETWEEN 1984 AND 1985 THEN '1984-1985'
+      WHEN Issue_Year BETWEEN 1986 AND 1999 THEN '1986-1999'
+      WHEN Issue_Year BETWEEN 2000 AND 2009 THEN '2000-2009'
+      WHEN Issue_Year BETWEEN 2010 AND 2018 THEN '2010-2018'
+      ELSE 'OTHER'
+    END AS bin
+  FROM ILEC_DATA
+) t
+GROUP BY bin
+ORDER BY bin
+LIMIT 100;
+
+	query done
+INFO:     127.0.0.1:34320 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:34320 - "POST /mcp HTTP/1.1" 200 OK
+SELECT bin,
+  SUM(Death_Claim_Amount) AS Actual,
+  SUM(CASE WHEN bin = '1906-1924_Early' THEN Expected_Death_QX7580E_by_Amount
+           WHEN bin = '1984-1985' THEN Expected_Death_QX2008VBT_by_Amount
+           ELSE Expected_Death_QX2015VBT_by_Amount END) AS Expected,
+  SUM(Death_Claim_Amount)/NULLIF(SUM(CASE WHEN bin = '1906-1924_Early' THEN Expected_Death_QX7580E_by_Amount
+           WHEN bin = '1984-1985' THEN Expected_Death_QX2008VBT_by_Amount
+           ELSE Expected_Death_QX2015VBT_by_Amount END),0) AS AE
+FROM (
+  SELECT *,
+    CASE
+      WHEN Issue_Year BETWEEN 1906 AND 1924 THEN '1906-1924_Early'
+      WHEN Issue_Year BETWEEN 1925 AND 1969 THEN '1925-1969'
+      WHEN Issue_Year BETWEEN 1970 AND 1983 THEN '1970-1983'
+      WHEN Issue_Year BETWEEN 1984 AND 1985 THEN '1984-1985'
+      WHEN Issue_Year BETWEEN 1986 AND 1996 THEN '1986-1996'
+      WHEN Issue_Year BETWEEN 1997 AND 1999 THEN '1997-1999'
+      WHEN Issue_Year BETWEEN 2000 AND 2009 THEN '2000-2009'
+      WHEN Issue_Year BETWEEN 2010 AND 2018 THEN '2010-2018'
+      ELSE 'OTHER'
+    END AS bin
+  FROM ILEC_DATA
+) t
+GROUP BY bin
+ORDER BY bin
+LIMIT 100;
+
+	query done
+INFO:     127.0.0.1:43300 - "DELETE /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:43300 - "DELETE /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33372 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:33372 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33386 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:33392 - "GET /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:33386 - "POST /mcp HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:33392 - "GET /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33400 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:33400 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51336 - "DELETE /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:51336 - "DELETE /mcp HTTP/1.1" 200 OK

@@ -22,7 +22,7 @@ ROW_LIMIT    = int(os.environ.get("ROW_LIMIT", "5000"))
 con = duckdb.connect(config={"threads": os.cpu_count() or 4})
 con.execute(f"CREATE VIEW ILEC_DATA AS SELECT * FROM read_parquet('{PARQUET_PATH}')")
 con.execute("PRAGMA disable_progress_bar")
-con.execute("PRAGMA memory_limit='8GB'")
+con.execute("PRAGMA memory_limit='16GB'")
 con.execute(f"PRAGMA threads={os.cpu_count() or 4}")
 
 # ---- MCP server + tools ----
@@ -33,19 +33,18 @@ def schema(ctx: Context) -> Dict[str, str]:
     rows = con.execute("PRAGMA table_info('ILEC_DATA')").fetchall()
     return {str(r[1]): str(r[2]).upper() for r in rows}
 
-@mcp.tool(description="Run a SQL query on the ILEC_DATA table. Can only select from ILEC_DATA.  Must include LIMIT (enforced).")
+@mcp.tool(description="Run a single ANSI-SQL compatible query on the ILEC_DATA table. Can only select from ILEC_DATA.  Must include LIMIT (enforced).")
 def sql(query: str, ctx: Context) -> Dict[str, Any]:
-    print(query)
-    
+    print(query)    
     t0 = time.time()
-    q = (query or "").strip().rstrip(";")
-    ql = " " + q.lower() + " "    
-    if " ilec_data " not in ql:
-        return {"error": "Query must reference ilec_data in FROM clause."}
-    if " limit " not in ql:
-        q = f"{q} LIMIT {ROW_LIMIT}"
-    res = con.execute(q)
-    print("\n\tquery done")
+    q = (query or "").strip().rstrip(";")    
+    try:        
+        res = con.execute(q)
+        print("\n\tquery done")
+    except:
+        print("\n\tquery error")
+        raise
+    
     cols = [d[0] for d in res.description]
     rows = res.fetchmany(ROW_LIMIT + 1)
     return {
