@@ -8,7 +8,7 @@ POST to:
   http://127.0.0.1:8000/mcp
 """
 import os, time
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import duckdb
 from starlette.responses import PlainTextResponse
@@ -20,10 +20,15 @@ ROW_LIMIT    = int(os.environ.get("ROW_LIMIT", "5000"))
 
 # ---- DuckDB ----
 con = duckdb.connect(config={"threads": os.cpu_count() or 4})
-con.execute(f"CREATE VIEW ILEC_DATA AS SELECT * FROM read_parquet('{PARQUET_PATH}')")
-con.execute("PRAGMA disable_progress_bar")
-con.execute("PRAGMA memory_limit='16GB'")
-con.execute(f"PRAGMA threads={os.cpu_count() or 4}")
+
+SETUP_DDB = [    
+    "PRAGMA disable_progress_bar",
+    "PRAGMA memory_limit='16GB'",
+    f"PRAGMA threads={os.cpu_count() or 4}",
+    f"CREATE VIEW ILEC_DATA AS SELECT * FROM read_parquet('{PARQUET_PATH}')"
+]
+for sql in SETUP_DDB:
+    con.execute(sql)
 
 # ---- MCP server + tools ----
 mcp = FastMCP("ilec")
@@ -52,6 +57,81 @@ def sql(query: str, ctx: Context) -> Dict[str, Any]:
         "rows": rows[:ROW_LIMIT],
         "truncated": len(rows) > ROW_LIMIT,
         "elapsed_s": round(time.time() - t0, 3),
+    }
+
+RPART_POISSON_DESC = \
+    "Runs a Poisson decision tree using rpart against the result of a sql query on ILEC_DATA table."\
+    "The where_clause argument will be used in the query SELECT * FROM ILEC_DATA WHERE <where_clause>."\
+    "all other arguments are must be valid column names from the schema of ILEC_data."\
+    "pass x_vars as a string array of column names OR an array of SQL expressions referencing valid column names. x_vars has a maximum size of 6 elements."\
+    "pass y_var as a string and a valid column name, and offset as a string and a valid column name."\
+    "The x_vars are used for GROUP BY in the sql query, and the SUM(offset) and SUM(y_var) are also computed."\
+    "The rpart formula is then 'cbind(SUM(offset),SUM(y_var)) ~ x_vars'."\
+    "max_depth and cp parameters are passed to rpart(control=rpart.control(...))."\
+    "max_depth can be a maximum of 5 (enforced)."\
+    "The function returns the output of print() on the decision tree."\
+    "yval in the output can be interpreted as an actual-to-expected ratio."\
+    
+
+@mcp.tool(description=RPART_POISSON_DESC)
+def rpart_poisson(where_clause: str, x_vars: List[str], offset: str, y_var: str, max_depth, cp, ctx: Context) -> Dict[str, Any]:
+    
+    print(f"rpart called with arguments: {where_clause}, {x_vars}, {offset}, {y_var}, {max_depth:d}, {cp}")
+
+    from rpy2.robjects import r, globalenv
+    from rpy2.robjects.packages import importr
+    
+    rduckdb = importr("duckdb")
+    rDBI = importr("DBI")
+
+    rconn = rDBI.dbConnect(rduckdb.duckdb(), ":memory:")
+    
+    max_depth = max(1, min(max_depth, 5))
+    cp = min(1., max(0.000001, cp))
+
+    print("running rpart()...\n")
+
+    if len(x_vars) > 6:
+        return {
+            "error" : "x_vars supports a maximum of 6 columns"
+        }
+
+    try:
+        for sql in SETUP_DDB:
+            rDBI.dbExecute(rconn, sql)                
+        
+        group_by_vars = ",".join(x_vars)
+        sum_vars = ",".join([
+            f"SUM(coalesce({offset}, 0)) as EXPECTED_EVENTS",
+            f"SUM(coalesce({y_var}, 0)) AS ACTUAL_EVENTS"
+        ])
+
+        data_sql = f"select {group_by_vars},{sum_vars} from ILEC_DATA where {where_clause} group by {group_by_vars}"
+        data_sql = f"with x as ({data_sql}) select * from x where EXPECTED_EVENTS > 0"
+
+        print("\n" + data_sql + "\n")
+
+        globalenv["df_results"] = rDBI.dbGetQuery(rconn, data_sql)
+
+        importr("rpart")
+        
+        formula_xvars = "+".join(x_vars)        
+
+        rpart_call = "rpart("\
+            """as.matrix(df_results[, c("EXPECTED_EVENTS","ACTUAL_EVENTS")]) ~ """\
+            f"{formula_xvars},"\
+            """data=df_results, method="poisson","""\
+            f"control=rpart.control(max_depth={max_depth:d}, cp={cp:.8f}))"        
+
+        rpart_res = r(f"capture.output(print({rpart_call}))")
+
+        print(rpart_call)
+
+    finally:
+        rDBI.dbDisconnect(rconn)
+
+    return {
+        "print(rpart(...))" : "\n".join(rpart_res)
     }
 
 # Build the MCP ASGI app

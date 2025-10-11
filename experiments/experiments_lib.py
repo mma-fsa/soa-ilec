@@ -10,6 +10,7 @@ from pathlib import Path
 from collections import deque
 
 context_window = None
+base_instructions = "You are assisting an actuary performing data analysis on life insurance data."
 
 def set_context_window_size(size=10):
     global context_window
@@ -18,7 +19,11 @@ def set_context_window_size(size=10):
 def get_context_window():
     return context_window
 
-async def prompt_ilec_data_async(prompt, model="gpt-5-mini", max_turns=10):
+def set_base_instructions(instructions):
+    global base_instructions
+    base_instructions = instructions
+
+async def prompt_ilec_data_async(prompt, model="gpt-5", max_turns=500):
 
     if context_window is None:
         raise Exception("Must call set_context_window_size()")
@@ -28,9 +33,9 @@ async def prompt_ilec_data_async(prompt, model="gpt-5-mini", max_turns=10):
     key = os.getenv("OPENAI_API_KEY") or Path("/home/mike/workspace/soa-ilec/soa-ilec/.openai_key").read_text().strip()
     os.environ["OPENAI_API_KEY"] = key  # Agents SDK reads this
     
-    final_prompt = prompt
+    final_prompt = base_instructions + prompt
     if len(context_window) > 0:
-        final_prompt += "\n\n here are your previous prompts and responses for context:\n\n" + "\n".join(context_window)
+        final_prompt += "\n\n here are your previous prompts and responses for context:\n\n" + "\n".join(context_window)        
 
     async with MCPServerStreamableHttp(
         name="ilec",
