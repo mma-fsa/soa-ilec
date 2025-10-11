@@ -87,6 +87,7 @@ echo "[start] Launching Jupyter Lab on http://127.0.0.1:8585 (no token)…"
 jupyter lab \
   --no-browser \
   --port 8585 \
+  --NotebookApp.notebook_dir='/home/mike/workspace/soa-ilec/soa-ilec/experiments/' \
   --ServerApp.token='' \
   --ServerApp.password='' \
   --NotebookApp.token='' \

@@ -1,502 +1,447 @@
-INFO:     127.0.0.1:53514 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:53514 - "POST /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53528 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:53536 - "GET /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:53528 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:     127.0.0.1:53536 - "GET /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53540 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:53540 - "POST /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53542 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:53542 - "POST /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53558 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:53558 - "POST /mcp HTTP/1.1" 200 OK
-SELECT Insurance_Plan, COUNT(*) AS rows_count
+INFO:     Started server process [3482367]
+INFO:     Waiting for application startup.
+[10/11/25 14:21:22] INFO     StreamableHTTP       streamable_http_manager.py:110
+                             session manager                                    
+                             started                                            
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:9090 (Press CTRL+C to quit)
+INFO:     127.0.0.1:51644 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+[10/11/25 14:22:14] INFO     Created new          streamable_http_manager.py:233
+                             transport with                                     
+                             session ID:                                        
+                             1cfaa93cc7db41b0859d                               
+                             1b72e0f4c3b4                                       
+INFO:     127.0.0.1:51644 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51652 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:51662 - "GET /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:51652 - "POST /mcp HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:51662 - "GET /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51676 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:51676 - "POST /mcp HTTP/1.1" 200 OK
+                    INFO     Processing request of type            server.py:664
+                             ListToolsRequest                                   
+INFO:     127.0.0.1:36136 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:36136 - "POST /mcp HTTP/1.1" 200 OK
+[10/11/25 14:22:19] INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
+INFO:     127.0.0.1:36138 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:36138 - "POST /mcp HTTP/1.1" 200 OK
+[10/11/25 14:22:23] INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
+SELECT DISTINCT Insurance_Plan FROM ILEC_DATA ORDER BY Insurance_Plan LIMIT 1000;
+
+	query done
+INFO:     127.0.0.1:36152 - "DELETE /mcp/ HTTP/1.1" 307 Temporary Redirect
+[10/11/25 14:22:25] INFO     Terminating session:         streamable_http.py:630
+                             1cfaa93cc7db41b0859d1b72e0f4                       
+                             c3b4                                               
+INFO:     127.0.0.1:36152 - "DELETE /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33834 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+[10/11/25 14:22:28] INFO     Created new          streamable_http_manager.py:233
+                             transport with                                     
+                             session ID:                                        
+                             50a57aba9f69452bbe5b                               
+                             6ca3be219e18                                       
+INFO:     127.0.0.1:33834 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33840 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:33848 - "GET /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:33840 - "POST /mcp HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:33848 - "GET /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33860 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:33860 - "POST /mcp HTTP/1.1" 200 OK
+                    INFO     Processing request of type            server.py:664
+                             ListToolsRequest                                   
+INFO:     127.0.0.1:46508 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:46508 - "POST /mcp HTTP/1.1" 200 OK
+[10/11/25 14:22:38] INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
+INFO:     127.0.0.1:50498 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:50498 - "POST /mcp HTTP/1.1" 200 OK
+[10/11/25 14:22:56] INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
+SELECT
+  Insurance_Plan,
+  SUM(Death_Claim_Amount) AS actual_amt,
+  SUM(Expected_Death_QX7580E_by_Amount) AS exp_7580E_amt,
+  SUM(Expected_Death_QX2001VBT_by_Amount) AS exp_2001vbt_amt,
+  SUM(Expected_Death_QX2008VBT_by_Amount) AS exp_2008vbt_amt,
+  SUM(Expected_Death_QX2008VBTLU_by_Amount) AS exp_2008vbtlu_amt,
+  SUM(Expected_Death_QX2015VBT_by_Amount) AS exp_2015vbt_amt,
+  SUM(ExpDeathQx2015VBTwMI_byAmt) AS exp_2015vbtwmi_amt,
+  SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0) AS AE_7580E,
+  SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0) AS AE_2001VBT,
+  SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0) AS AE_2008VBT,
+  SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0) AS AE_2008VBTLU,
+  SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0) AS AE_2015VBT,
+  SUM(Death_Claim_Amount)/NULLIF(SUM(ExpDeathQx2015VBTwMI_byAmt),0) AS AE_2015VBTwMI
 FROM ILEC_DATA
 GROUP BY Insurance_Plan
 ORDER BY Insurance_Plan
 LIMIT 100;
 
 	query done
-INFO:     127.0.0.1:58730 - "DELETE /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:58730 - "DELETE /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58742 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:58742 - "POST /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58758 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:58770 - "GET /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:58758 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:     127.0.0.1:58770 - "GET /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58786 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:58786 - "POST /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58802 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:58802 - "POST /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51080 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:51080 - "POST /mcp HTTP/1.1" 200 OK
-SELECT
+INFO:     127.0.0.1:43106 - "DELETE /mcp/ HTTP/1.1" 307 Temporary Redirect
+[10/11/25 14:23:19] INFO     Terminating session:         streamable_http.py:630
+                             50a57aba9f69452bbe5b6ca3be21                       
+                             9e18                                               
+INFO:     127.0.0.1:43106 - "DELETE /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48544 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+[10/11/25 14:24:05] INFO     Created new          streamable_http_manager.py:233
+                             transport with                                     
+                             session ID:                                        
+                             394aa9f95f274a11acdf                               
+                             9ea90c7ddc52                                       
+INFO:     127.0.0.1:48544 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48550 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:48564 - "GET /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:48550 - "POST /mcp HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:48564 - "GET /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48580 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:48580 - "POST /mcp HTTP/1.1" 200 OK
+                    INFO     Processing request of type            server.py:664
+                             ListToolsRequest                                   
+INFO:     127.0.0.1:42954 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:42954 - "POST /mcp HTTP/1.1" 200 OK
+[10/11/25 14:24:22] INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
+INFO:     127.0.0.1:51216 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:51216 - "POST /mcp HTTP/1.1" 200 OK
+[10/11/25 14:24:41] INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
+SELECT 
   Insurance_Plan,
-  SUM(Death_Claim_Amount) AS Actual_Amount,
-  SUM(Expected_Death_QX7580E_by_Amount) AS Expected_QX7580E_by_Amount,
-  CASE WHEN SUM(Expected_Death_QX7580E_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_Death_QX7580E_by_Amount) END AS AE_QX7580E,
-
-  SUM(Expected_Death_QX2001VBT_by_Amount) AS Expected_QX2001VBT_by_Amount,
-  CASE WHEN SUM(Expected_Death_QX2001VBT_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2001VBT_by_Amount) END AS AE_QX2001VBT,
-
-  SUM(Expected_Death_QX2008VBT_by_Amount) AS Expected_QX2008VBT_by_Amount,
-  CASE WHEN SUM(Expected_Death_QX2008VBT_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2008VBT_by_Amount) END AS AE_QX2008VBT,
-
-  SUM(Expected_Death_QX2008VBTLU_by_Amount) AS Expected_QX2008VBTLU_by_Amount,
-  CASE WHEN SUM(Expected_Death_QX2008VBTLU_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2008VBTLU_by_Amount) END AS AE_QX2008VBTLU,
-
-  SUM(Expected_Death_QX2015VBT_by_Amount) AS Expected_QX2015VBT_by_Amount,
-  CASE WHEN SUM(Expected_Death_QX2015VBT_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2015VBT_by_Amount) END AS AE_QX2015VBT
-
+  CASE 
+    WHEN Attained_Age < 40 THEN '<40'
+    WHEN Attained_Age BETWEEN 40 AND 49 THEN '40-49'
+    WHEN Attained_Age BETWEEN 50 AND 59 THEN '50-59'
+    WHEN Attained_Age BETWEEN 60 AND 69 THEN '60-69'
+    WHEN Attained_Age BETWEEN 70 AND 79 THEN '70-79'
+    ELSE '80+'
+  END AS Age_Band,
+  SUM(Death_Claim_Amount) AS Actual_Amt,
+  SUM(Expected_Death_QX2015VBT_by_Amount) AS Exp_VBT_Amt,
+  SUM(ExpDeathQx2015VBTwMI_byAmt) AS Exp_VBT_MI_Amt,
+  SUM(Death_Claim_Amount) / NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0) AS AE_VBT,
+  SUM(Death_Claim_Amount) / NULLIF(SUM(ExpDeathQx2015VBTwMI_byAmt),0) AS AE_VBT_MI,
+  CASE WHEN ABS(SUM(Death_Claim_Amount) / NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0) - 1) <= 
+            ABS(SUM(Death_Claim_Amount) / NULLIF(SUM(ExpDeathQx2015VBTwMI_byAmt),0) - 1)
+       THEN '2015 VBT' ELSE '2015 VBT w/ MI' END AS Best_Basis
 FROM ILEC_DATA
-GROUP BY Insurance_Plan
-LIMIT 1000;
+WHERE COALESCE(Expected_Death_QX2015VBT_by_Amount,0) > 0 AND COALESCE(ExpDeathQx2015VBTwMI_byAmt,0) > 0
+GROUP BY Insurance_Plan, Age_Band
+ORDER BY Insurance_Plan, Age_Band
+LIMIT 100000;
 
 	query done
-INFO:     127.0.0.1:50664 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:50664 - "POST /mcp HTTP/1.1" 200 OK
-SELECT
-  SUM(Death_Claim_Amount) AS Actual_Amount,
-  SUM(Expected_Death_QX7580E_by_Amount) AS Expected_QX7580E_by_Amount,
-  CASE WHEN SUM(Expected_Death_QX7580E_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_Death_QX7580E_by_Amount) END AS AE_QX7580E,
-
-  SUM(Expected_Death_QX2001VBT_by_Amount) AS Expected_QX2001VBT_by_Amount,
-  CASE WHEN SUM(Expected_Death_QX2001VBT_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_QX2001VBT_by_Amount) END AS AE_QX2001VBT,
-
-  SUM(Expected_Death_QX2008VBT_by_Amount) AS Expected_QX2008VBT_by_Amount,
-  CASE WHEN SUM(Expected_Death_QX2008VBT_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2008VBT_by_Amount) END AS AE_QX2008VBT,
-
-  SUM(Expected_Death_QX2008VBTLU_by_Amount) AS Expected_QX2008VBTLU_by_Amount,
-  CASE WHEN SUM(Expected_Death_QX2008VBTLU_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_QX2008VBTLU_by_Amount) END AS AE_QX2008VBTLU,
-
-  SUM(Expected_Death_QX2015VBT_by_Amount) AS Expected_QX2015VBT_by_Amount,
-  CASE WHEN SUM(Expected_Death_QX2015VBT_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_QX2015VBT_by_Amount) END AS AE_QX2015VBT
+INFO:     127.0.0.1:51196 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:51196 - "POST /mcp HTTP/1.1" 200 OK
+[10/11/25 14:24:51] INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
+SELECT 
+  Insurance_Plan,
+  Preferred_Class,
+  SUM(Death_Claim_Amount) AS Actual_Amt,
+  SUM(Expected_Death_QX2015VBT_by_Amount) AS Exp_VBT_Amt,
+  SUM(ExpDeathQx2015VBTwMI_byAmt) AS Exp_VBT_MI_Amt,
+  SUM(Death_Claim_Amount) / NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0) AS AE_VBT,
+  SUM(Death_Claim_Amount) / NULLIF(SUM(ExpDeathQx2015VBTwMI_byAmt),0) AS AE_VBT_MI,
+  CASE WHEN ABS(SUM(Death_Claim_Amount) / NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0) - 1) <= 
+            ABS(SUM(Death_Claim_Amount) / NULLIF(SUM(ExpDeathQx2015VBTwMI_byAmt),0) - 1)
+       THEN '2015 VBT' ELSE '2015 VBT w/ MI' END AS Best_Basis
 FROM ILEC_DATA
-LIMIT 1;
-
-	query error
-INFO:     127.0.0.1:40954 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:40954 - "POST /mcp HTTP/1.1" 200 OK
-SELECT
-  SUM(Death_Claim_Amount) AS Actual_Amount,
-  SUM(Expected_Death_QX7580E_by_Amount) AS Expected_QX7580E_by_Amount,
-  CASE WHEN SUM(Expected_Death_QX7580E_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_Death_QX7580E_by_Amount) END AS AE_QX7580E,
-
-  SUM(Expected_Death_QX2001VBT_by_Amount) AS Expected_QX2001VBT_by_Amount,
-  CASE WHEN SUM(Expected_Death_QX2001VBT_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2001VBT_by_Amount) END AS AE_QX2001VBT,
-
-  SUM(Expected_Death_QX2008VBT_by_Amount) AS Expected_QX2008VBT_by_Amount,
-  CASE WHEN SUM(Expected_Death_QX2008VBT_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2008VBT_by_Amount) END AS AE_QX2008VBT,
-
-  SUM(Expected_Death_QX2008VBTLU_by_Amount) AS Expected_QX2008VBTLU_by_Amount,
-  CASE WHEN SUM(Expected_Death_QX2008VBTLU_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2008VBTLU_by_Amount) END AS AE_QX2008VBTLU,
-
-  SUM(Expected_Death_QX2015VBT_by_Amount) AS Expected_QX2015VBT_by_Amount,
-  CASE WHEN SUM(Expected_Death_QX2015VBT_by_Amount)=0 THEN NULL ELSE SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2015VBT_by_Amount) END AS AE_QX2015VBT
-FROM ILEC_DATA
-LIMIT 1;
+WHERE COALESCE(Expected_Death_QX2015VBT_by_Amount,0) > 0 AND COALESCE(ExpDeathQx2015VBTwMI_byAmt,0) > 0
+GROUP BY Insurance_Plan, Preferred_Class
+ORDER BY Insurance_Plan, Preferred_Class
+LIMIT 100000;
 
 	query done
-INFO:     127.0.0.1:58396 - "DELETE /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:58396 - "DELETE /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58410 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:58410 - "POST /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58426 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:58442 - "GET /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:58426 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:     127.0.0.1:58442 - "GET /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58450 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:58450 - "POST /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57696 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:57696 - "POST /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57226 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:57226 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45424 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:45424 - "POST /mcp HTTP/1.1" 200 OK
+[10/11/25 14:25:02] INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
+SELECT 
+  Insurance_Plan,
+  Observation_Year,
+  SUM(Death_Claim_Amount) AS Actual_Amt,
+  SUM(Expected_Death_QX2015VBT_by_Amount) AS Exp_VBT_Amt,
+  SUM(ExpDeathQx2015VBTwMI_byAmt) AS Exp_VBT_MI_Amt,
+  SUM(Death_Claim_Amount) / NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0) AS AE_VBT,
+  SUM(Death_Claim_Amount) / NULLIF(SUM(ExpDeathQx2015VBTwMI_byAmt),0) AS AE_VBT_MI,
+  CASE WHEN ABS(SUM(Death_Claim_Amount) / NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0) - 1) <= 
+            ABS(SUM(Death_Claim_Amount) / NULLIF(SUM(ExpDeathQx2015VBTwMI_byAmt),0) - 1)
+       THEN '2015 VBT' ELSE '2015 VBT w/ MI' END AS Best_Basis
+FROM ILEC_DATA
+WHERE COALESCE(Expected_Death_QX2015VBT_by_Amount,0) > 0 AND COALESCE(ExpDeathQx2015VBTwMI_byAmt,0) > 0
+GROUP BY Insurance_Plan, Observation_Year
+ORDER BY Insurance_Plan, Observation_Year
+LIMIT 100000;
+
+	query done
+INFO:     127.0.0.1:57474 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:57474 - "POST /mcp HTTP/1.1" 200 OK
+[10/11/25 14:25:52] INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
+SELECT 
+  Insurance_Plan,
+  CASE 
+    WHEN Attained_Age < 40 THEN '<40'
+    WHEN Attained_Age BETWEEN 40 AND 49 THEN '40-49'
+    WHEN Attained_Age BETWEEN 50 AND 59 THEN '50-59'
+    WHEN Attained_Age BETWEEN 60 AND 69 THEN '60-69'
+    WHEN Attained_Age BETWEEN 70 AND 79 THEN '70-79'
+    ELSE '80+'
+  END AS Age_Band,
+  COALESCE(Preferred_Class,'(null)') AS Preferred_Class,
+  CASE 
+    WHEN Observation_Year BETWEEN 2009 AND 2011 THEN '2009-2011'
+    WHEN Observation_Year BETWEEN 2012 AND 2015 THEN '2012-2015'
+    WHEN Observation_Year BETWEEN 2016 AND 2018 THEN '2016-2018'
+    ELSE 'Other'
+  END AS Year_Band,
+  SUM(Death_Claim_Amount) AS Actual_Amt,
+  SUM(Expected_Death_QX2015VBT_by_Amount) AS Exp_VBT_Amt,
+  SUM(ExpDeathQx2015VBTwMI_byAmt) AS Exp_VBT_MI_Amt,
+  SUM(Death_Claim_Amount) / NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0) AS AE_VBT,
+  SUM(Death_Claim_Amount) / NULLIF(SUM(ExpDeathQx2015VBTwMI_byAmt),0) AS AE_VBT_MI,
+  CASE WHEN ABS(SUM(Death_Claim_Amount) / NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0) - 1) <= 
+            ABS(SUM(Death_Claim_Amount) / NULLIF(SUM(ExpDeathQx2015VBTwMI_byAmt),0) - 1)
+       THEN '2015 VBT' ELSE '2015 VBT w/ MI' END AS Best_Basis
+FROM ILEC_DATA
+WHERE COALESCE(Expected_Death_QX2015VBT_by_Amount,0) > 0 AND COALESCE(ExpDeathQx2015VBTwMI_byAmt,0) > 0
+GROUP BY Insurance_Plan, Age_Band, COALESCE(Preferred_Class,'(null)'), Year_Band
+ORDER BY Insurance_Plan, Age_Band, Preferred_Class, Year_Band
+LIMIT 100000;
+
+	query done
+INFO:     127.0.0.1:36448 - "DELETE /mcp/ HTTP/1.1" 307 Temporary Redirect
+[10/11/25 14:26:56] INFO     Terminating session:         streamable_http.py:630
+                             394aa9f95f274a11acdf9ea90c7d                       
+                             dc52                                               
+INFO:     127.0.0.1:36448 - "DELETE /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56094 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+[10/11/25 14:29:11] INFO     Created new          streamable_http_manager.py:233
+                             transport with                                     
+                             session ID:                                        
+                             d44a0dcc98e646c88dea                               
+                             4e67c29a8ed8                                       
+INFO:     127.0.0.1:56094 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56102 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:56108 - "GET /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:56102 - "POST /mcp HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:56108 - "GET /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56116 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:56116 - "POST /mcp HTTP/1.1" 200 OK
+                    INFO     Processing request of type            server.py:664
+                             ListToolsRequest                                   
+INFO:     127.0.0.1:40096 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:40096 - "POST /mcp HTTP/1.1" 200 OK
+[10/11/25 14:29:53] INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
+INFO:     127.0.0.1:52030 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:52030 - "POST /mcp HTTP/1.1" 200 OK
+[10/11/25 14:30:23] INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
 SELECT Insurance_Plan,
- SUM(Death_Claim_Amount) AS Actual,
- SUM(Expected_Death_QX7580E_by_Amount) AS Exp_QX7580E,
- SUM(Expected_Death_QX2001VBT_by_Amount) AS Exp_QX2001VBT,
- SUM(Expected_Death_QX2008VBT_by_Amount) AS Exp_QX2008VBT,
- SUM(Expected_Death_QX2008VBTLU_by_Amount) AS Exp_QX2008VBTLU,
- SUM(Expected_Death_QX2015VBT_by_Amount) AS Exp_QX2015VBT
+       SUM(Death_Claim_Amount) AS Actual_Amt,
+       SUM(Expected_Death_QX7580E_by_Amount) AS Exp_7580E,
+       SUM(Expected_Death_QX2001VBT_by_Amount) AS Exp_2001VBT,
+       SUM(Expected_Death_QX2008VBT_by_Amount) AS Exp_2008VBT,
+       SUM(Expected_Death_QX2008VBTLU_by_Amount) AS Exp_2008VBT_LU,
+       SUM(Expected_Death_QX2015VBT_by_Amount) AS Exp_2015VBT,
+       SUM(ExpDeathQx2015VBTwMI_byAmt) AS Exp_2015VBT_MI,
+       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0) AS AE_7580E,
+       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0) AS AE_2001VBT,
+       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0) AS AE_2008VBT,
+       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0) AS AE_2008VBT_LU,
+       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0) AS AE_2015VBT,
+       SUM(Death_Claim_Amount)/NULLIF(SUM(ExpDeathQx2015VBTwMI_byAmt),0) AS AE_2015VBT_MI
 FROM ILEC_DATA
 GROUP BY Insurance_Plan
-LIMIT 100;
+ORDER BY Insurance_Plan
+LIMIT 1000000000;
 
 	query done
-INFO:     127.0.0.1:32782 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:32782 - "POST /mcp HTTP/1.1" 200 OK
-SELECT 'QX7580E' AS Basis,
- SUM(Death_Claim_Amount)/SUM(Expected_Death_QX7580E_by_Amount) AS Overall_AE,
- SUM(ABS(Death_Claim_Amount - Expected_Death_QX7580E_by_Amount)) / SUM(Expected_Death_QX7580E_by_Amount) AS WAPE,
- SQRT( SUM( (Death_Claim_Amount - Expected_Death_QX7580E_by_Amount)*(Death_Claim_Amount - Expected_Death_QX7580E_by_Amount) / NULLIF(Expected_Death_QX7580E_by_Amount,0) ) / SUM(Expected_Death_QX7580E_by_Amount) ) AS Weighted_RMSE,
- SUM( (Death_Claim_Amount - Expected_Death_QX7580E_by_Amount)*(Death_Claim_Amount - Expected_Death_QX7580E_by_Amount) / NULLIF(Expected_Death_QX7580E_by_Amount,0) ) AS Pearson_Chi2
-FROM ILEC_DATA
-UNION ALL
-SELECT 'QX2001VBT' AS Basis,
- SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2001VBT_by_Amount) AS Overall_AE,
- SUM(ABS(Death_Claim_Amount - Expected_Death_QX2001VBT_by_Amount)) / SUM(Expected_Death_QX2001VBT_by_Amount) AS WAPE,
- SQRT( SUM( (Death_Claim_Amount - Expected_Death_QX2001VBT_by_Amount)*(Death_Claim_Amount - Expected_Death_QX2001VBT_by_Amount) / NULLIF(Expected_Death_QX2001VBT_by_Amount,0) ) / SUM(Expected_Death_QX2001VBT_by_Amount) ) AS Weighted_RMSE,
- SUM( (Death_Claim_Amount - Expected_Death_QX2001VBT_by_Amount)*(Death_Claim_Amount - Expected_Death_QX2001VBT_by_Amount) / NULLIF(Expected_Death_QX2001VBT_by_Amount,0) ) AS Pearson_Chi2
-FROM ILEC_DATA
-UNION ALL
-SELECT 'QX2008VBT' AS Basis,
- SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2008VBT_by_Amount) AS Overall_AE,
- SUM(ABS(Death_Claim_Amount - Expected_Death_QX2008VBT_by_Amount)) / SUM(Expected_Death_QX2008VBT_by_Amount) AS WAPE,
- SQRT( SUM( (Death_Claim_Amount - Expected_Death_QX2008VBT_by_Amount)*(Death_Claim_Amount - Expected_Death_QX2008VBT_by_Amount) / NULLIF(Expected_Death_QX2008VBT_by_Amount,0) ) / SUM(Expected_Death_QX2008VBT_by_Amount) ) AS Weighted_RMSE,
- SUM( (Death_Claim_Amount - Expected_Death_QX2008VBT_by_Amount)*(Death_Claim_Amount - Expected_Death_QX2008VBT_by_Amount) / NULLIF(Expected_Death_QX2008VBT_by_Amount,0) ) AS Pearson_Chi2
-FROM ILEC_DATA
-UNION ALL
-SELECT 'QX2008VBTLU' AS Basis,
- SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2008VBTLU_by_Amount) AS Overall_AE,
- SUM(ABS(Death_Claim_Amount - Expected_Death_QX2008VBTLU_by_Amount)) / SUM(Expected_Death_QX2008VBTLU_by_Amount) AS WAPE,
- SQRT( SUM( (Death_Claim_Amount - Expected_Death_QX2008VBTLU_by_Amount)*(Death_Claim_Amount - Expected_Death_QX2008VBTLU_by_Amount) / NULLIF(Expected_Death_QX2008VBTLU_by_Amount,0) ) / SUM(Expected_Death_QX2008VBTLU_by_Amount) ) AS Weighted_RMSE,
- SUM( (Death_Claim_Amount - Expected_Death_QX2008VBTLU_by_Amount)*(Death_Claim_Amount - Expected_Death_QX2008VBTLU_by_Amount) / NULLIF(Expected_Death_QX2008VBTLU_by_Amount,0) ) AS Pearson_Chi2
-FROM ILEC_DATA
-UNION ALL
-SELECT 'QX2015VBT' AS Basis,
- SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2015VBT_by_Amount) AS Overall_AE,
- SUM(ABS(Death_Claim_Amount - Expected_Death_QX2015VBT_by_Amount)) / SUM(Expected_Death_QX2015VBT_by_Amount) AS WAPE,
- SQRT( SUM( (Death_Claim_Amount - Expected_Death_QX2015VBT_by_Amount)*(Death_Claim_Amount - Expected_Death_QX2015VBT_by_Amount) / NULLIF(Expected_Death_QX2015VBT_by_Amount,0) ) / SUM(Expected_Death_QX2015VBT_by_Amount) ) AS Weighted_RMSE,
- SUM( (Death_Claim_Amount - Expected_Death_QX2015VBT_by_Amount)*(Death_Claim_Amount - Expected_Death_QX2015VBT_by_Amount) / NULLIF(Expected_Death_QX2015VBT_by_Amount,0) ) AS Pearson_Chi2
-FROM ILEC_DATA
-LIMIT 10;
+INFO:     127.0.0.1:38888 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:38898 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:38904 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:38910 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:38912 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:38916 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:38918 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:38888 - "POST /mcp HTTP/1.1" 200 OK
+[10/11/25 14:31:20] INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
+INFO:     127.0.0.1:38898 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38904 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38910 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38912 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38916 - "POST /mcp HTTP/1.1" 200 OK
+                    INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
+INFO:     127.0.0.1:38918 - "POST /mcp HTTP/1.1" 200 OK
+                    INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
+INFO:     127.0.0.1:46128 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:46128 - "POST /mcp HTTP/1.1" 200 OK
+[10/11/25 14:31:31] INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
+INFO:     127.0.0.1:46134 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:46134 - "POST /mcp HTTP/1.1" 200 OK
+[10/11/25 14:31:34] INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
+rpart called with arguments: Insurance_Plan = 'Perm' AND Expected_Death_QX2015VBT_by_Amount > 0, ['Attained_Age', 'Preferred_Class', 'Observation_Year'], Expected_Death_QX2015VBT_by_Amount, Death_Claim_Amount, 3, 0.01
+                    INFO     cffi mode is CFFI_MODE.ANY           __init__.py:44
+                    INFO     R home found:                       __init__.py:217
+                             /home/mike/miniforge3/envs/soa-ilec                
+                             /lib/R                                             
+                    INFO     R library path:                     __init__.py:160
+                    INFO     LD_LIBRARY_PATH:                    __init__.py:164
+                    INFO     Default options to initialize R:     embedded.py:21
+                             rpy2, --quiet, --no-save                           
+[10/11/2025 02:31:34 PM] INFO     R is already initialized. No  __init__.py:1127
+                                  need to initialize.                           
+running rpart()...
 
-	query done
-INFO:     127.0.0.1:51232 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:51232 - "POST /mcp HTTP/1.1" 200 OK
-SELECT Insurance_Plan, 'QX7580E' AS Basis,
- SUM(Death_Claim_Amount) AS Actual,
- SUM(Expected_Death_QX7580E_by_Amount) AS Expected,
- SUM(Death_Claim_Amount)/SUM(Expected_Death_QX7580E_by_Amount) AS AE
-FROM ILEC_DATA
-GROUP BY Insurance_Plan
-UNION ALL
-SELECT Insurance_Plan, 'QX2001VBT' AS Basis,
- SUM(Death_Claim_Amount) AS Actual,
- SUM(Expected_Death_QX2001VBT_by_Amount) AS Expected,
- SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2001VBT_by_Amount) AS AE
-FROM ILEC_DATA
-GROUP BY Insurance_Plan
-UNION ALL
-SELECT Insurance_Plan, 'QX2008VBT' AS Basis,
- SUM(Death_Claim_Amount) AS Actual,
- SUM(Expected_Death_QX2008VBT_by_Amount) AS Expected,
- SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2008VBT_by_Amount) AS AE
-FROM ILEC_DATA
-GROUP BY Insurance_Plan
-UNION ALL
-SELECT Insurance_Plan, 'QX2008VBTLU' AS Basis,
- SUM(Death_Claim_Amount) AS Actual,
- SUM(Expected_Death_QX2008VBTLU_by_Amount) AS Expected,
- SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2008VBTLU_by_Amount) AS AE
-FROM ILEC_DATA
-GROUP BY Insurance_Plan
-UNION ALL
-SELECT Insurance_Plan, 'QX2015VBT' AS Basis,
- SUM(Death_Claim_Amount) AS Actual,
- SUM(Expected_Death_QX2015VBT_by_Amount) AS Expected,
- SUM(Death_Claim_Amount)/SUM(Expected_Death_QX2015VBT_by_Amount) AS AE
-FROM ILEC_DATA
-GROUP BY Insurance_Plan
-LIMIT 100;
 
-	query done
-INFO:     127.0.0.1:47804 - "DELETE /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:47804 - "DELETE /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56784 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:56784 - "POST /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56800 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:56812 - "GET /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:56800 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:     127.0.0.1:56812 - "GET /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56826 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:56826 - "POST /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:38242 - "DELETE /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:38242 - "DELETE /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51304 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:51304 - "POST /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51320 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:51322 - "GET /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:51320 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:     127.0.0.1:51322 - "GET /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51324 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:51324 - "POST /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51332 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:51332 - "POST /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:41086 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:41086 - "POST /mcp HTTP/1.1" 200 OK
-SELECT Issue_Year, 'QX7580E' AS Basis,
-       SUM(Death_Claim_Amount) AS Actual,
-       SUM(Expected_Death_QX7580E_by_Amount) AS Expected,
-       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0) AS AE
-FROM ILEC_DATA
-GROUP BY Issue_Year
-ORDER BY Issue_Year
-LIMIT 1000;
+with x as (select Attained_Age,Preferred_Class,Observation_Year,SUM(coalesce(Expected_Death_QX2015VBT_by_Amount, 0)) as EXPECTED_EVENTS,SUM(coalesce(Death_Claim_Amount, 0)) AS ACTUAL_EVENTS from ILEC_DATA where Insurance_Plan = 'Perm' AND Expected_Death_QX2015VBT_by_Amount > 0 group by Attained_Age,Preferred_Class,Observation_Year) select * from x where EXPECTED_EVENTS > 0
 
-	query done
-INFO:     127.0.0.1:34018 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:34018 - "POST /mcp HTTP/1.1" 200 OK
-SELECT Issue_Year,
-       SUM(Death_Claim_Amount) AS Actual,
-       SUM(Expected_Death_QX7580E_by_Amount) AS E_QX7580E,
-       SUM(Expected_Death_QX2001VBT_by_Amount) AS E_QX2001VBT,
-       SUM(Expected_Death_QX2008VBT_by_Amount) AS E_QX2008VBT,
-       SUM(Expected_Death_QX2008VBTLU_by_Amount) AS E_QX2008VBTLU,
-       SUM(Expected_Death_QX2015VBT_by_Amount) AS E_QX2015VBT,
-       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0) AS AE_QX7580E,
-       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0) AS AE_QX2001VBT,
-       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0) AS AE_QX2008VBT,
-       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0) AS AE_QX2008VBTLU,
-       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0) AS AE_QX2015VBT
-FROM ILEC_DATA
-GROUP BY Issue_Year
-ORDER BY Issue_Year
-LIMIT 1000;
+done w/: rpart(as.matrix(df_results[, c("EXPECTED_EVENTS","ACTUAL_EVENTS")]) ~ Attained_Age+Preferred_Class+Observation_Year,data=df_results, method="poisson",control=rpart.control(max_depth=3, cp=0.01000000))
+INFO:     127.0.0.1:57580 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:57580 - "POST /mcp HTTP/1.1" 200 OK
+[10/11/25 14:31:39] INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
+rpart called with arguments: Insurance_Plan = 'Other' AND Expected_Death_QX2015VBT_by_Amount > 0, ['Attained_Age', 'Preferred_Class', 'Observation_Year'], Expected_Death_QX2015VBT_by_Amount, Death_Claim_Amount, 3, 0.01
+                    INFO     cffi mode is CFFI_MODE.ANY           __init__.py:44
+                    INFO     R home found:                       __init__.py:217
+                             /home/mike/miniforge3/envs/soa-ilec                
+                             /lib/R                                             
+                    INFO     R library path:                     __init__.py:160
+                    INFO     LD_LIBRARY_PATH:                    __init__.py:164
+                    INFO     Default options to initialize R:     embedded.py:21
+                             rpy2, --quiet, --no-save                           
+[10/11/2025 02:31:39 PM] INFO     R is already initialized. No  __init__.py:1127
+                                  need to initialize.                           
+running rpart()...
 
-	query done
-INFO:     127.0.0.1:36220 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:36220 - "POST /mcp HTTP/1.1" 200 OK
-SELECT Issue_Year,
-       SUM(Death_Claim_Amount) AS Actual,
-       SUM(Expected_Death_QX7580E_by_Amount) AS E_QX7580E,
-       SUM(Expected_Death_QX2001VBT_by_Amount) AS E_QX2001VBT,
-       SUM(Expected_Death_QX2008VBT_by_Amount) AS E_QX2008VBT,
-       SUM(Expected_Death_QX2008VBTLU_by_Amount) AS E_QX2008VBTLU,
-       SUM(Expected_Death_QX2015VBT_by_Amount) AS E_QX2015VBT,
-       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0) AS AE_QX7580E,
-       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0) AS AE_QX2001VBT,
-       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0) AS AE_QX2008VBT,
-       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0) AS AE_QX2008VBTLU,
-       SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0) AS AE_QX2015VBT,
-       CASE
-         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
-           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1)
-           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1)
-           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1)
-         THEN 'QX2015VBT'
-         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
-           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1)
-           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1)
-         THEN 'QX2008VBT'
-         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
-           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1)
-         THEN 'QX2001VBT'
-         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
-         THEN 'QX2008VBTLU'
-         ELSE 'QX7580E'
-       END AS Best_Basis
-FROM ILEC_DATA
-GROUP BY Issue_Year
-ORDER BY Issue_Year
-LIMIT 1000;
 
-	query done
-INFO:     127.0.0.1:52112 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:52112 - "POST /mcp HTTP/1.1" 200 OK
-SELECT Best_Basis, COUNT(*) AS Num_Issue_Years
-FROM (
-  SELECT Issue_Year,
-       CASE
-         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
-           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1)
-           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1)
-           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1)
-         THEN 'QX2015VBT'
-         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
-           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1)
-           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1)
-         THEN 'QX2008VBT'
-         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
-           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1)
-         THEN 'QX2001VBT'
-         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
-         THEN 'QX2008VBTLU'
-         ELSE 'QX7580E'
-       END AS Best_Basis
-  FROM ILEC_DATA
-  GROUP BY Issue_Year
-) t
-GROUP BY Best_Basis
-ORDER BY Num_Issue_Years DESC;
+with x as (select Attained_Age,Preferred_Class,Observation_Year,SUM(coalesce(Expected_Death_QX2015VBT_by_Amount, 0)) as EXPECTED_EVENTS,SUM(coalesce(Death_Claim_Amount, 0)) AS ACTUAL_EVENTS from ILEC_DATA where Insurance_Plan = 'Other' AND Expected_Death_QX2015VBT_by_Amount > 0 group by Attained_Age,Preferred_Class,Observation_Year) select * from x where EXPECTED_EVENTS > 0
 
-	query done
-INFO:     127.0.0.1:40286 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:40286 - "POST /mcp HTTP/1.1" 200 OK
-SELECT Issue_Year,
-       CASE
-         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
-           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1)
-           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1)
-           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1)
-         THEN 'QX2015VBT'
-         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
-           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1)
-           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1)
-         THEN 'QX2008VBT'
-         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
-           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1)
-         THEN 'QX2001VBT'
-         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
-         THEN 'QX2008VBTLU'
-         ELSE 'QX7580E'
-       END AS Best_Basis
-FROM ILEC_DATA
-GROUP BY Issue_Year
-HAVING
-  CASE
-         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
-           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1)
-           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1)
-           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1)
-         THEN 'QX2015VBT'
-         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
-           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1)
-           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1)
-         THEN 'QX2008VBT'
-         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
-           AND ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1)
-         THEN 'QX2001VBT'
-         WHEN ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0)-1) <= ABS(SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0)-1)
-         THEN 'QX2008VBTLU'
-         ELSE 'QX7580E'
-       END <> 'QX2015VBT'
-ORDER BY Issue_Year
-LIMIT 1000;
+done w/: rpart(as.matrix(df_results[, c("EXPECTED_EVENTS","ACTUAL_EVENTS")]) ~ Attained_Age+Preferred_Class+Observation_Year,data=df_results, method="poisson",control=rpart.control(max_depth=3, cp=0.01000000))
+INFO:     127.0.0.1:57590 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:57590 - "POST /mcp HTTP/1.1" 200 OK
+[10/11/25 14:31:44] INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
+rpart called with arguments: Insurance_Plan = 'Term' AND Expected_Death_QX2015VBT_by_Amount > 0, ['Attained_Age', 'Preferred_Class', 'Observation_Year'], Expected_Death_QX2015VBT_by_Amount, Death_Claim_Amount, 3, 0.01
+                    INFO     cffi mode is CFFI_MODE.ANY           __init__.py:44
+                    INFO     R home found:                       __init__.py:217
+                             /home/mike/miniforge3/envs/soa-ilec                
+                             /lib/R                                             
+                    INFO     R library path:                     __init__.py:160
+                    INFO     LD_LIBRARY_PATH:                    __init__.py:164
+                    INFO     Default options to initialize R:     embedded.py:21
+                             rpy2, --quiet, --no-save                           
+[10/11/2025 02:31:45 PM] INFO     R is already initialized. No  __init__.py:1127
+                                  need to initialize.                           
+running rpart()...
 
-	query done
-INFO:     127.0.0.1:36802 - "DELETE /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:36802 - "DELETE /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:41182 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:41182 - "POST /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:41184 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:41194 - "GET /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:41184 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:     127.0.0.1:41194 - "GET /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:41200 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:41200 - "POST /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:38848 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:38848 - "POST /mcp HTTP/1.1" 200 OK
-SELECT Issue_Year,
-  SUM(Death_Claim_Amount) AS Actual,
-  SUM(Expected_Death_QX7580E_by_Amount) AS E_QX7580E,
-  SUM(Expected_Death_QX2001VBT_by_Amount) AS E_QX2001VBT,
-  SUM(Expected_Death_QX2008VBT_by_Amount) AS E_QX2008VBT,
-  SUM(Expected_Death_QX2008VBTLU_by_Amount) AS E_QX2008VBTLU,
-  SUM(Expected_Death_QX2015VBT_by_Amount) AS E_QX2015VBT,
-  SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0) AS AE_QX7580E,
-  SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0) AS AE_QX2001VBT,
-  SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0) AS AE_QX2008VBT,
-  SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0) AS AE_QX2008VBTLU,
-  SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0) AS AE_QX2015VBT
-FROM ILEC_DATA
-GROUP BY Issue_Year
-ORDER BY Issue_Year
-LIMIT 1000;
 
-	query done
-INFO:     127.0.0.1:48664 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:48664 - "POST /mcp HTTP/1.1" 200 OK
-WITH agg AS (
-  SELECT Issue_Year,
-    SUM(Death_Claim_Amount) AS Actual,
-    SUM(Expected_Death_QX7580E_by_Amount) AS E_QX7580E,
-    SUM(Expected_Death_QX2001VBT_by_Amount) AS E_QX2001VBT,
-    SUM(Expected_Death_QX2008VBT_by_Amount) AS E_QX2008VBT,
-    SUM(Expected_Death_QX2008VBTLU_by_Amount) AS E_QX2008VBTLU,
-    SUM(Expected_Death_QX2015VBT_by_Amount) AS E_QX2015VBT,
-    SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX7580E_by_Amount),0) AS AE_QX7580E,
-    SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2001VBT_by_Amount),0) AS AE_QX2001VBT,
-    SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBT_by_Amount),0) AS AE_QX2008VBT,
-    SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2008VBTLU_by_Amount),0) AS AE_QX2008VBTLU,
-    SUM(Death_Claim_Amount)/NULLIF(SUM(Expected_Death_QX2015VBT_by_Amount),0) AS AE_QX2015VBT
-  FROM ILEC_DATA
-  GROUP BY Issue_Year
-)
-SELECT Issue_Year, Actual,
-  AE_QX7580E, AE_QX2001VBT, AE_QX2008VBT, AE_QX2008VBTLU, AE_QX2015VBT,
-  CASE
-    WHEN abs(AE_QX2015VBT-1) <= abs(AE_QX2008VBT-1) AND abs(AE_QX2015VBT-1) <= abs(AE_QX2008VBTLU-1) AND abs(AE_QX2015VBT-1) <= abs(AE_QX2001VBT-1) AND abs(AE_QX2015VBT-1) <= abs(AE_QX7580E-1) THEN 'QX2015VBT'
-    WHEN abs(AE_QX2008VBT-1) <= abs(AE_QX2015VBT-1) AND abs(AE_QX2008VBT-1) <= abs(AE_QX2008VBTLU-1) AND abs(AE_QX2008VBT-1) <= abs(AE_QX2001VBT-1) AND abs(AE_QX2008VBT-1) <= abs(AE_QX7580E-1) THEN 'QX2008VBT'
-    WHEN abs(AE_QX2008VBTLU-1) <= abs(AE_QX2015VBT-1) AND abs(AE_QX2008VBTLU-1) <= abs(AE_QX2008VBT-1) AND abs(AE_QX2008VBTLU-1) <= abs(AE_QX2001VBT-1) AND abs(AE_QX2008VBTLU-1) <= abs(AE_QX7580E-1) THEN 'QX2008VBTLU'
-    WHEN abs(AE_QX2001VBT-1) <= abs(AE_QX2015VBT-1) AND abs(AE_QX2001VBT-1) <= abs(AE_QX2008VBT-1) AND abs(AE_QX2001VBT-1) <= abs(AE_QX2008VBTLU-1) AND abs(AE_QX2001VBT-1) <= abs(AE_QX7580E-1) THEN 'QX2001VBT'
-    ELSE 'QX7580E'
-  END AS Best_Basis,
-  LEAST(abs(AE_QX7580E-1), abs(AE_QX2001VBT-1), abs(AE_QX2008VBT-1), abs(AE_QX2008VBTLU-1), abs(AE_QX2015VBT-1)) AS Best_Abs_Dev
-FROM agg
-ORDER BY Issue_Year
-LIMIT 1000;
+with x as (select Attained_Age,Preferred_Class,Observation_Year,SUM(coalesce(Expected_Death_QX2015VBT_by_Amount, 0)) as EXPECTED_EVENTS,SUM(coalesce(Death_Claim_Amount, 0)) AS ACTUAL_EVENTS from ILEC_DATA where Insurance_Plan = 'Term' AND Expected_Death_QX2015VBT_by_Amount > 0 group by Attained_Age,Preferred_Class,Observation_Year) select * from x where EXPECTED_EVENTS > 0
 
-	query done
-INFO:     127.0.0.1:37410 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:37410 - "POST /mcp HTTP/1.1" 200 OK
-SELECT bin,
-  SUM(Death_Claim_Amount) AS Actual,
-  SUM(CASE WHEN bin = '1906-1924_Early' THEN Expected_Death_QX7580E_by_Amount
-           WHEN bin = '1984-1985' THEN Expected_Death_QX2008VBT_by_Amount
-           ELSE Expected_Death_QX2015VBT_by_Amount END) AS Expected,
-  SUM(Death_Claim_Amount)/NULLIF(SUM(CASE WHEN bin = '1906-1924_Early' THEN Expected_Death_QX7580E_by_Amount
-           WHEN bin = '1984-1985' THEN Expected_Death_QX2008VBT_by_Amount
-           ELSE Expected_Death_QX2015VBT_by_Amount END),0) AS AE
-FROM (
-  SELECT *,
-    CASE
-      WHEN Issue_Year BETWEEN 1906 AND 1924 THEN '1906-1924_Early'
-      WHEN Issue_Year BETWEEN 1925 AND 1969 THEN '1925-1969'
-      WHEN Issue_Year BETWEEN 1970 AND 1983 THEN '1970-1983'
-      WHEN Issue_Year BETWEEN 1984 AND 1985 THEN '1984-1985'
-      WHEN Issue_Year BETWEEN 1986 AND 1999 THEN '1986-1999'
-      WHEN Issue_Year BETWEEN 2000 AND 2009 THEN '2000-2009'
-      WHEN Issue_Year BETWEEN 2010 AND 2018 THEN '2010-2018'
-      ELSE 'OTHER'
-    END AS bin
-  FROM ILEC_DATA
-) t
-GROUP BY bin
-ORDER BY bin
-LIMIT 100;
+done w/: rpart(as.matrix(df_results[, c("EXPECTED_EVENTS","ACTUAL_EVENTS")]) ~ Attained_Age+Preferred_Class+Observation_Year,data=df_results, method="poisson",control=rpart.control(max_depth=3, cp=0.01000000))
+INFO:     127.0.0.1:53764 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:53764 - "POST /mcp HTTP/1.1" 200 OK
+[10/11/25 14:31:49] INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
+rpart called with arguments: Insurance_Plan = 'UL' AND ExpDeathQx2015VBTwMI_byAmt > 0, ['Attained_Age', 'Preferred_Class', 'Observation_Year'], ExpDeathQx2015VBTwMI_byAmt, Death_Claim_Amount, 3, 0.01
+                    INFO     cffi mode is CFFI_MODE.ANY           __init__.py:44
+                    INFO     R home found:                       __init__.py:217
+                             /home/mike/miniforge3/envs/soa-ilec                
+                             /lib/R                                             
+                    INFO     R library path:                     __init__.py:160
+                    INFO     LD_LIBRARY_PATH:                    __init__.py:164
+                    INFO     Default options to initialize R:     embedded.py:21
+                             rpy2, --quiet, --no-save                           
+[10/11/2025 02:31:49 PM] INFO     R is already initialized. No  __init__.py:1127
+                                  need to initialize.                           
+running rpart()...
 
-	query done
-INFO:     127.0.0.1:34320 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:34320 - "POST /mcp HTTP/1.1" 200 OK
-SELECT bin,
-  SUM(Death_Claim_Amount) AS Actual,
-  SUM(CASE WHEN bin = '1906-1924_Early' THEN Expected_Death_QX7580E_by_Amount
-           WHEN bin = '1984-1985' THEN Expected_Death_QX2008VBT_by_Amount
-           ELSE Expected_Death_QX2015VBT_by_Amount END) AS Expected,
-  SUM(Death_Claim_Amount)/NULLIF(SUM(CASE WHEN bin = '1906-1924_Early' THEN Expected_Death_QX7580E_by_Amount
-           WHEN bin = '1984-1985' THEN Expected_Death_QX2008VBT_by_Amount
-           ELSE Expected_Death_QX2015VBT_by_Amount END),0) AS AE
-FROM (
-  SELECT *,
-    CASE
-      WHEN Issue_Year BETWEEN 1906 AND 1924 THEN '1906-1924_Early'
-      WHEN Issue_Year BETWEEN 1925 AND 1969 THEN '1925-1969'
-      WHEN Issue_Year BETWEEN 1970 AND 1983 THEN '1970-1983'
-      WHEN Issue_Year BETWEEN 1984 AND 1985 THEN '1984-1985'
-      WHEN Issue_Year BETWEEN 1986 AND 1996 THEN '1986-1996'
-      WHEN Issue_Year BETWEEN 1997 AND 1999 THEN '1997-1999'
-      WHEN Issue_Year BETWEEN 2000 AND 2009 THEN '2000-2009'
-      WHEN Issue_Year BETWEEN 2010 AND 2018 THEN '2010-2018'
-      ELSE 'OTHER'
-    END AS bin
-  FROM ILEC_DATA
-) t
-GROUP BY bin
-ORDER BY bin
-LIMIT 100;
 
-	query done
-INFO:     127.0.0.1:43300 - "DELETE /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:43300 - "DELETE /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:33372 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:33372 - "POST /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:33386 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:33392 - "GET /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:33386 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:     127.0.0.1:33392 - "GET /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:33400 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:33400 - "POST /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51336 - "DELETE /mcp/ HTTP/1.1" 307 Temporary Redirect
-INFO:     127.0.0.1:51336 - "DELETE /mcp HTTP/1.1" 200 OK
+with x as (select Attained_Age,Preferred_Class,Observation_Year,SUM(coalesce(ExpDeathQx2015VBTwMI_byAmt, 0)) as EXPECTED_EVENTS,SUM(coalesce(Death_Claim_Amount, 0)) AS ACTUAL_EVENTS from ILEC_DATA where Insurance_Plan = 'UL' AND ExpDeathQx2015VBTwMI_byAmt > 0 group by Attained_Age,Preferred_Class,Observation_Year) select * from x where EXPECTED_EVENTS > 0
+
+done w/: rpart(as.matrix(df_results[, c("EXPECTED_EVENTS","ACTUAL_EVENTS")]) ~ Attained_Age+Preferred_Class+Observation_Year,data=df_results, method="poisson",control=rpart.control(max_depth=3, cp=0.01000000))
+INFO:     127.0.0.1:53778 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:53778 - "POST /mcp HTTP/1.1" 200 OK
+[10/11/25 14:31:51] INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
+rpart called with arguments: Insurance_Plan = 'ULSG' AND ExpDeathQx2015VBTwMI_byAmt > 0, ['Attained_Age', 'Preferred_Class', 'Observation_Year'], ExpDeathQx2015VBTwMI_byAmt, Death_Claim_Amount, 3, 0.01
+                    INFO     cffi mode is CFFI_MODE.ANY           __init__.py:44
+                    INFO     R home found:                       __init__.py:217
+                             /home/mike/miniforge3/envs/soa-ilec                
+                             /lib/R                                             
+                    INFO     R library path:                     __init__.py:160
+                    INFO     LD_LIBRARY_PATH:                    __init__.py:164
+                    INFO     Default options to initialize R:     embedded.py:21
+                             rpy2, --quiet, --no-save                           
+[10/11/2025 02:31:52 PM] INFO     R is already initialized. No  __init__.py:1127
+                                  need to initialize.                           
+running rpart()...
+
+
+with x as (select Attained_Age,Preferred_Class,Observation_Year,SUM(coalesce(ExpDeathQx2015VBTwMI_byAmt, 0)) as EXPECTED_EVENTS,SUM(coalesce(Death_Claim_Amount, 0)) AS ACTUAL_EVENTS from ILEC_DATA where Insurance_Plan = 'ULSG' AND ExpDeathQx2015VBTwMI_byAmt > 0 group by Attained_Age,Preferred_Class,Observation_Year) select * from x where EXPECTED_EVENTS > 0
+
+done w/: rpart(as.matrix(df_results[, c("EXPECTED_EVENTS","ACTUAL_EVENTS")]) ~ Attained_Age+Preferred_Class+Observation_Year,data=df_results, method="poisson",control=rpart.control(max_depth=3, cp=0.01000000))
+INFO:     127.0.0.1:53784 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:53784 - "POST /mcp HTTP/1.1" 200 OK
+[10/11/25 14:31:54] INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
+rpart called with arguments: Insurance_Plan = 'VL' AND ExpDeathQx2015VBTwMI_byAmt > 0, ['Attained_Age', 'Preferred_Class', 'Observation_Year'], ExpDeathQx2015VBTwMI_byAmt, Death_Claim_Amount, 3, 0.01
+                    INFO     cffi mode is CFFI_MODE.ANY           __init__.py:44
+                    INFO     R home found:                       __init__.py:217
+                             /home/mike/miniforge3/envs/soa-ilec                
+                             /lib/R                                             
+                    INFO     R library path:                     __init__.py:160
+                    INFO     LD_LIBRARY_PATH:                    __init__.py:164
+                    INFO     Default options to initialize R:     embedded.py:21
+                             rpy2, --quiet, --no-save                           
+[10/11/2025 02:31:54 PM] INFO     R is already initialized. No  __init__.py:1127
+                                  need to initialize.                           
+running rpart()...
+
+
+with x as (select Attained_Age,Preferred_Class,Observation_Year,SUM(coalesce(ExpDeathQx2015VBTwMI_byAmt, 0)) as EXPECTED_EVENTS,SUM(coalesce(Death_Claim_Amount, 0)) AS ACTUAL_EVENTS from ILEC_DATA where Insurance_Plan = 'VL' AND ExpDeathQx2015VBTwMI_byAmt > 0 group by Attained_Age,Preferred_Class,Observation_Year) select * from x where EXPECTED_EVENTS > 0
+
+done w/: rpart(as.matrix(df_results[, c("EXPECTED_EVENTS","ACTUAL_EVENTS")]) ~ Attained_Age+Preferred_Class+Observation_Year,data=df_results, method="poisson",control=rpart.control(max_depth=3, cp=0.01000000))
+INFO:     127.0.0.1:53792 - "POST /mcp/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:53792 - "POST /mcp HTTP/1.1" 200 OK
+[10/11/25 14:31:56] INFO     Processing request of type            server.py:664
+                             CallToolRequest                                    
+rpart called with arguments: Insurance_Plan = 'VLSG' AND ExpDeathQx2015VBTwMI_byAmt > 0, ['Attained_Age', 'Preferred_Class', 'Observation_Year'], ExpDeathQx2015VBTwMI_byAmt, Death_Claim_Amount, 3, 0.01
+                    INFO     cffi mode is CFFI_MODE.ANY           __init__.py:44
+                    INFO     R home found:                       __init__.py:217
+                             /home/mike/miniforge3/envs/soa-ilec                
+                             /lib/R                                             
+                    INFO     R library path:                     __init__.py:160
+                    INFO     LD_LIBRARY_PATH:                    __init__.py:164
+                    INFO     Default options to initialize R:     embedded.py:21
+                             rpy2, --quiet, --no-save                           
+[10/11/2025 02:31:56 PM] INFO     R is already initialized. No  __init__.py:1127
+                                  need to initialize.                           
+running rpart()...
+
+
+with x as (select Attained_Age,Preferred_Class,Observation_Year,SUM(coalesce(ExpDeathQx2015VBTwMI_byAmt, 0)) as EXPECTED_EVENTS,SUM(coalesce(Death_Claim_Amount, 0)) AS ACTUAL_EVENTS from ILEC_DATA where Insurance_Plan = 'VLSG' AND ExpDeathQx2015VBTwMI_byAmt > 0 group by Attained_Age,Preferred_Class,Observation_Year) select * from x where EXPECTED_EVENTS > 0
+
+done w/: rpart(as.matrix(df_results[, c("EXPECTED_EVENTS","ACTUAL_EVENTS")]) ~ Attained_Age+Preferred_Class+Observation_Year,data=df_results, method="poisson",control=rpart.control(max_depth=3, cp=0.01000000))
+INFO:     127.0.0.1:42936 - "DELETE /mcp/ HTTP/1.1" 307 Temporary Redirect
+[10/11/25 14:33:02] INFO     Terminating session:         streamable_http.py:630
+                             d44a0dcc98e646c88dea4e67c29a                       
+                             8ed8                                               
+INFO:     127.0.0.1:42936 - "DELETE /mcp HTTP/1.1" 200 OK
