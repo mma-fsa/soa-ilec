@@ -14,6 +14,8 @@ import duckdb
 from starlette.responses import PlainTextResponse
 from mcp.server.fastmcp import FastMCP, Context
 
+from multiprocessing import Process, Queue
+
 # ---- Config ----
 PARQUET_PATH = os.environ.get("PARQUET_PATH", "/home/mike/workspace/soa-ilec/soa-ilec/data/ilec_2009_19_20210528.parquet")
 ROW_LIMIT    = int(os.environ.get("ROW_LIMIT", "5000"))
@@ -73,23 +75,24 @@ RPART_POISSON_DESC = \
     "yval in the output can be interpreted as an actual-to-expected ratio."\
     
 
-@mcp.tool(description=RPART_POISSON_DESC)
-def rpart_poisson(where_clause: str, x_vars: List[str], offset: str, y_var: str, max_depth, cp, ctx: Context) -> Dict[str, Any]:
+def fork_rpart(where_clause: str, x_vars: List[str], offset: str, y_var: str, max_depth, cp, q):
     
-    print(f"rpart called with arguments: {where_clause}, {x_vars}, {offset}, {y_var}, {max_depth:d}, {cp}")
-
-    from rpy2.robjects import r, globalenv
-    from rpy2.robjects.packages import importr
-    
-    rduckdb = importr("duckdb")
-    rDBI = importr("DBI")
-
-    rconn = rDBI.dbConnect(rduckdb.duckdb(), ":memory:")
-    
-    max_depth = max(1, min(max_depth, 5))
-    cp = min(1., max(0.000001, cp))
-
     print("running rpart()...\n")
+
+    try:
+        from rpy2.robjects import r, globalenv
+        from rpy2.robjects.packages import importr
+        
+        rduckdb = importr("duckdb")
+        rDBI = importr("DBI")
+
+        max_depth = max(1, min(max_depth, 5))
+        cp = min(1., max(0.000001, cp))
+
+        rconn = rDBI.dbConnect(rduckdb.duckdb(), ":memory:")                
+    except Exception as e:
+        q.put("Error setting up R environment: " + str(e))
+        return
 
     if len(x_vars) > 6:
         return {
@@ -124,14 +127,31 @@ def rpart_poisson(where_clause: str, x_vars: List[str], offset: str, y_var: str,
             f"control=rpart.control(max_depth={max_depth:d}, cp={cp:.8f}))"        
 
         rpart_res = r(f"capture.output(print({rpart_call}))")
+        q.put("\n".join(rpart_res))
+        
+        print("done w/: " + rpart_call)
 
-        print(rpart_call)
-
+    except Exception as e:
+        q.put("Error running rpart(): " + str(e))
     finally:
         rDBI.dbDisconnect(rconn)
 
+    return 
+
+
+@mcp.tool(description=RPART_POISSON_DESC)
+def rpart_poisson(where_clause: str, x_vars: List[str], offset: str, y_var: str, max_depth, cp, ctx: Context) -> Dict[str, Any]:
+    
+    print(f"rpart called with arguments: {where_clause}, {x_vars}, {offset}, {y_var}, {max_depth:d}, {cp}")
+
+    q = Queue()
+    p = Process(target = fork_rpart, args=(where_clause, x_vars, offset, y_var, max_depth, cp, q))
+    p.start()
+    rpart_res = q.get()
+    p.join()
+    
     return {
-        "print(rpart(...))" : "\n".join(rpart_res)
+        "print(rpart(...))" : rpart_res
     }
 
 # Build the MCP ASGI app
