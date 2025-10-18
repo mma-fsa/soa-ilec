@@ -1,0 +1,130 @@
+---
+title: "Untitled"
+author: "Mike McPhee Anderson, FSA"
+date: "2025-10-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+library(DBI)
+library(duckdb)
+library(rpart)
+library(tidyverse)
+
+AGENT_LIB = "~/workspace/soa-ilec/soa-ilec/mcp/ilec_r_lib.R"
+AGENT_WS_DIR = "/home/mike/workspace/soa-ilec/soa-ilec/mcp_agent_work/session_abcedfg"
+
+```
+
+## Setup work dir
+
+```{r}
+
+system(paste0("rm -rf ", AGENT_WS_DIR))
+system(paste0("mkdir -p ", AGENT_WS_DIR))
+
+```
+
+## Setup database connection
+
+```{r}
+
+pq_path <- "/home/mike/workspace/soa-ilec/soa-ilec/data/ilec_2009_19_20210528.parquet"
+
+if (!exists("conn")) {
+  conn <- DBI::dbConnect(duckdb::duckdb(), paste0(AGENT_WS_DIR, "/model_data.duckdb"))
+  DBI::dbExecute(conn, "set memory_limit='4GB'")
+}
+
+tbl_ilec_data <- tbl(
+  conn, 
+  sprintf("read_parquet('%s')", pq_path)) %>%
+  mutate(
+    Smoker_Status = case_when(
+      coalesce(Smoker_Status, "UNKNOWN") == "UNKNOWN" ~ "Unismoke",
+      TRUE ~ Smoker_Status
+    )
+  )
+
+DBI::dbExecute(
+  conn,
+  sprintf("create or replace view ILEC_DATA as (%s)", dbplyr::sql_render(tbl_ilec_data))
+)
+
+```
+
+
+## Test Agent Functionality
+
+```{r}
+source(AGENT_LIB)
+setwd(AGENT_WS_DIR)
+
+cmd_create_dataset(conn, "training_data", "select * from ILEC_DATA where Observation_Year <= 2016 and Expected_Death_QX2015VBT_by_Policy > 0")
+cmd_create_dataset(conn, "testing_data", "select * from ILEC_DATA where Observation_Year > 2016 and Expected_Death_QX2015VBT_by_Policy > 0")
+
+```
+
+## test rpart
+
+```{r}
+
+source(AGENT_LIB)
+setwd(AGENT_WS_DIR)
+
+x_vars <- c("Gender", "Insurance_Plan", "Smoker_Status", "Issue_Year")
+
+# test that it can run on a parquet
+cmd_rpart(conn, "training_data", x_vars, "Expected_Death_QX2015VBT_by_Policy", "Number_Of_Deaths", 3, 0.001)
+
+
+```
+
+
+```{r}
+
+source(AGENT_LIB)
+setwd(AGENT_WS_DIR)
+
+
+x_vars <- c("Gender", "Insurance_Plan", "Smoker_Status", "Issue_Year")
+# test that it can run on a parquet
+cmd_rpart(conn, "ILEC_DATA", x_vars, "Expected_Death_QX2015VBT_by_Policy", "Number_Of_Deaths", 3, 0.001)
+
+```
+
+## test glmnet
+
+```{r}
+
+source(AGENT_LIB)
+setwd(AGENT_WS_DIR)
+
+x_vars <- c("Gender", "Insurance_Plan", "Smoker_Status", "Issue_Year")
+design_matrix_vars <- c(
+  "Gender:Insurance_Plan",
+  "Issue_Year",
+  "Gender*Smoker_Status"
+)
+
+cmd_glmnet(
+  conn,
+  "training_data",
+  x_vars,
+  design_matrix_vars,
+  list(
+    "Gender" = "Male",
+    "Smoker_Status" = "NonSmoker"
+  ),
+  list(
+    "Issue_Year" = c(1980, 2022)
+  ),
+  "Expected_Death_QX2015VBT_by_Policy",
+  "Number_Of_Deaths",
+  "1se"
+)
+
+
+```
+

@@ -1,57 +1,81 @@
+# todo: install if these packages are missing
+library(glmnet)
+library(recipes)
+library(butcher)
+library(carrier)
+library(rpart)
+library(rsample)
 library(tidyverse)
 
-# save the SQL used to build df_model_data
-df_model_data_sql <- NULL
-
-# all calls to modeling functions operate on this dataframe,
-# which is set by cmd_load_model_data()
-df_model_data <- NULL
-df_model_data.train <- NULL
-df_model_data.test <- NULL
-
-# df_model_data.(train|test) w/ model predictions appended
-df_fit.train <- NULL
-df_fit.test <- NULL
-
-# stores the data prep for glmnet so that we can use it in run_inference()
-prep_glmnet_data <- NULL
-
-# stores the last glmnet fit so that we can use it in run_inference()
-fit_glmnet <- NULL
-
-# this should be called prior to any modeling functions
-# conn is setup automatically, only SQL must be passed
-cmd_set_modeling_data <- function(conn, sql, strata_vars) {
-  library(rsample)
+# this should be called prior to cmd_rpart / cmd_glmnet to create data
+# conn is setup automatically, and is a connection to a DuckDB database, 
+# only sql needs to be passed by the agent
+cmd_create_dataset <- function(conn, dataset_name, sql) {
   
-  df_model_data <<- DBI::dbGetQuery(conn, sql)
-  df_model_data_sql <<- sql
+  # set the dataset output local
+  dataset_output_file <- paste0(getwd(), "/", dataset_name, ".parquet")
   
-  # the most informative holdout set to validate
-  # design matrix specification is future years
-  df_model_data.train <- df_model_data %>%
-    filter(Observation_Year <= 2016)
-  df_model_data.test <- df_model_data %>%
-    filter(Observation_Year > 2016)
+  # do not allow overwrites of datasets
+  if (file.exists(dataset_output_file)) {
+    stop(sprintf("Cannot create a dataset: '%s', already exists"))
+  }
+  
+  # view definition
+  sql_create_view <- sprintf(
+    "create or replace view vw_dataset as (%s)", sql
+  )
+  
+  # create the modeling view
+  DBI::dbExecute(conn, sql_create_view)
+  # write the dataset
+  sql_create_data <- sprintf(
+    "copy(select * from vw_dataset) to '%s' (FORMAT PARQUET, ROW_GROUP_SIZE 100000)",
+    dataset_output_file
+  )
+  DBI::dbExecute(conn, sql_create_data)
+  
+  # return dataset summary statistics
+  tbl_dataset <- tbl(conn, sprintf("read_parquet('%s')", dataset_output_file))
+  
+  if (("Expected_Deaths" %in% colnames(tbl_dataset)) && ("Number_Of_Deaths" %in% colnames(tbl_dataset))) {
+    ds_summary <- tbl_dataset %>%
+      summarise(n_rows = n(), Number_Of_Deaths = sum(Number_Of_Deaths), Expected_Deaths = sum(Expected_Deaths)) %>% 
+      collect()
+  } else {
+    ds_summary <- tbl_dataset %>%
+      summarise(n_rows = n()) %>% 
+      collect()
+  }
+  
+  return(list(ds_summary))
 }
 
+# conn is setup automatically, and is a connection to a DuckDB database, 
 # builds a poisson decision tree
-cmd_rpart <- function(dataset, x_vars, offset, y_var, max_depth, cp) {
+cmd_rpart <- function(conn, dataset, x_vars, offset_var, y_var, max_depth, cp) {
+
+  # check if the dataset is a parquet file
+  pq_filename <- sprintf("%s.parquet", dataset)
+  if (file.exists(pq_filename)) {
+    tbl_dataset <- tbl(conn, sprintf("read_parquet('%s.parquet')", dataset))  
+  } else {
+    # assume that it exists in duckdb (e.g. table / view)
+    tbl_dataset <- tbl(conn, dataset)
+  }
   
-  library(rpart)
-  
-  rpart_data <- .GlobalEnv[[dataset]] %>%
+  rpart_data <- tbl_dataset %>%
     group_by(across(all_of(x_vars))) %>%
     summarise(
-      offset = sum(!!sym(offset)),
-      y_var = sum(!!sym(y_var)),
+      offset = sum(!!sym(offset_var)),
+      y = sum(!!sym(y_var)),
       .groups = "drop"
     ) %>%
     ungroup() %>%
+    collect() %>%
     mutate(across(where(is.character), as.factor))
   
   rhs <- reformulate(x_vars)          
-  rpart_formula <- update(rhs, cbind(offset, y_var) ~ .)  
+  rpart_formula <- update(rhs, cbind(offset, y) ~ .)  
   
   fit_rpart <- rpart(
     rpart_formula,
@@ -71,22 +95,18 @@ cmd_rpart <- function(dataset, x_vars, offset, y_var, max_depth, cp) {
 # design_matrix_vars can use transformations, e.g. c("splines::ns(x1)", "x2*x3", "x3^2")
 # factor_var_levels is a list of x_var names the default level used in the factor, e.g. list("Gender"="Male", "Smoker_Status"="NonSmoker")
 # num_var_clip clips a numeric variable at the specified range, e.g. c("Issue_Age"= c(17, 85)) clips the min at 17 and max at 85
-cmd_glmnet <- function(x_vars, design_matrix_vars, factor_vars_levels, num_var_clip, offset, y_var, lambda_strat) {
-  library(glmnet)
-  library(recipes)
+cmd_glmnet <- function(conn, dataset, x_vars, design_matrix_vars, factor_vars_levels, num_var_clip, offset_var, y_var, lambda_strat) {
   
-  if (is.null(df_model_data)) {
-    return("must call cmd_load_model_data() first to assign df_model_data")
-  }
+  tbl_dataset <- tbl(conn, sprintf("read_parquet('%s.parquet')", dataset)) %>%
+      group_by(across(all_of(x_vars))) %>%
+      summarise(
+        offset = sum(!!sym(offset_var)),
+        y = sum(!!sym(y_var)),
+        .groups = "drop"
+      ) %>%
+      ungroup()
   
-  glmnet_data <- df_model_data.train %>%
-    group_by(across(all_of(x_vars))) %>%
-    summarise(
-      offset = sum(!!sym(offset)),
-      y_var = sum(!!sym(y_var)),
-      .groups = "drop"
-    ) %>%
-    ungroup()
+  glmnet_data <- tbl_dataset %>% collect()
   
   # check that offset / exposure is non-zero
   num_zero_expos <- glmnet_data %>%
@@ -98,7 +118,7 @@ cmd_glmnet <- function(x_vars, design_matrix_vars, factor_vars_levels, num_var_c
   }
   
   recipe_rhs <- reformulate(x_vars)
-  recipe_formula <- update(recipe_rhs, y_var ~ .)  
+  recipe_formula <- update(recipe_rhs, y ~ .)  
   
   prep_glmnet_data <<- recipe(
     recipe_formula,
@@ -120,8 +140,9 @@ cmd_glmnet <- function(x_vars, design_matrix_vars, factor_vars_levels, num_var_c
   # convert them to factors using step_string2factor, 
   # use the default level if it is present in the factor_vars_levels
   for (cv in char_vars) {
+    
     default_level <- factor_vars_levels[[cv]]
-    unique_values <- unique(df_model_data.train[[cv]])
+    unique_values <- unique(glmnet_data[[cv]])
     
     if (length(unique_values) > 25) {
       stop(sprintf("Error: %s has more than 25 levels", cv))
@@ -147,7 +168,7 @@ cmd_glmnet <- function(x_vars, design_matrix_vars, factor_vars_levels, num_var_c
   # training data, prevents issues with splines in formula
   for (nv in numeric_vars) {
     
-    var_range <- range(df_model_data.train[[nv]], na.rm=TRUE)
+    var_range <- range(glmnet_data[[nv]], na.rm=TRUE)
     
     # only respect the clipping if they are within min / max of training data
     if (nv %in% names(num_var_clip)) {
@@ -172,11 +193,9 @@ cmd_glmnet <- function(x_vars, design_matrix_vars, factor_vars_levels, num_var_c
   dmat_rhs <- reformulate(design_matrix_vars)
   dmat_formula <- update(dmat_rhs, ~ . - 1)  
   
-  browser()
-  
   # build design matrix, response, and offset vectors
   X_mat <- model.matrix(dmat_formula, data = glmnet_data.prepped)
-  y_vec <- glmnet_data$y_var
+  y_vec <- glmnet_data$y
   offset_vec <- log(glmnet_data$offset)
   
   # run GLMNET
@@ -188,12 +207,6 @@ cmd_glmnet <- function(x_vars, design_matrix_vars, factor_vars_levels, num_var_c
     nlambda = 100
   )
   
-  # choose the best lambda according to a strategy
-  valid_lambda_strats <- c("1se", "AIC", "BIC")
-  if (!(lambda_strat %in% valid_lambda_strats)) {
-    stop("Unknown lambda strategy: %s", lambda_strat)
-  }
-  
   if (lambda_strat == "1se") {
     
     # use the top 50% deviance ratios to compute the standard deviations
@@ -201,26 +214,110 @@ cmd_glmnet <- function(x_vars, design_matrix_vars, factor_vars_levels, num_var_c
     best_dev_ratios <- fit_glmnet$dev.ratio[as.integer(n_fit_lambdas/2):n_fit_lambdas]
     sd_dev_ratios <- sd(log(best_dev_ratios))
     
-    # choose lambda as max(dev.ratio) - 1se
-    
+    best_dev_ratio_1se <- exp(log(max(best_dev_ratios)) - sd_dev_ratios)
+    best_lambda_idx <- max(which(fit_glmnet$dev.ratio <= best_dev_ratio_1se))
+      
   } else if (lambda_strat %in% c("AIC", "BIC")) {
+    # not 100% sure the math checks out here...
     compute_AIC_BIC <- function(fit){
       tLL <- -deviance(fit)
-      k <- dim(model.matrix(fit))[2]
-      n <- nobs(fit)
-      AICc <- -tLL+2*k+2*k*(k+1)/(n-k-1)
-      AIC_ <- -tLL+2*k
-      BIC<-log(n)*k - tLL
-      res=c(AIC_, BIC, AICc)
-      names(res)=c("AIC", "BIC", "AICc")
-      return(res)
+      k <- dim(X_mat)[2]
+      n <- sum(y_vec)
+      fit_AIC <- -tLL+2*k
+      fit_BIC <- log(n)*k - tLL
+      return(list(
+        "AIC" = fit_AIC,
+        "BIC" = fit_BIC
+      ))
     }
-    
+    strat_criteria <- compute_AIC_BIC(fit_glmnet)[[lambda_strat]]
+    best_lambda_idx <- which(
+      strat_criteria == min(strat_criteria)
+    )
+  } else {
+    stop("Unknown lambda strategy: %s", lambda_strat)
   }
   
-  # run inference @ optimal s (based on strategy)
+  # select best lambda based on criteria
+  best_lambda <- fit_glmnet$lambda[best_lambda_idx]
   
-  return(NULL)
+  # bundle up model into carrier crate
+  run_model <<- carrier::crate(function(df, use_offset = T) {
+      
+      df_prepped <- recipes::bake(prep_glmnet_data, df)
+      X_mat <- stats::model.matrix(dmat_formula, df_prepped)
+      
+      if (use_offset) {
+        pred_vec <- stats::predict(
+          fit_glmnet,
+          X_mat,
+          newoffset = log(df[[offset_var]]),
+          s = best_lambda,
+          type = "response"
+        )
+      } else {
+        pred_vec <- stats::predict(
+          fit_glmnet,
+          X_mat,
+          s = best_lambda,
+          type = "response"
+        )
+      }
+      return(as.double(pred_vec))
+    },
+    prep_glmnet_data = prep_glmnet_data,
+    fit_glmnet = fit_glmnet,
+    offset_var = offset_var,
+    dmat_formula = dmat_formula,
+    best_lambda = best_lambda,
+    lambda_strat = lambda_strat
+  )
+  
+  # rename offset column back to original
+  names(glmnet_data)[names(glmnet_data) == "offset"] <- offset_var
+  
+  # rename y-var columns ack to original
+  names(glmnet_data)[names(glmnet_data) == "y"] <- y_var
+  
+  # run inference on training data
+  glmnet_data[["MODEL_PRED"]] <- run_model(glmnet_data)
+  
+  # sanity check
+  ae_train <- sum(glmnet_data[[y_var]]) / sum(glmnet_data$MODEL_PRED)
+  if (abs(log(ae_train)) >= log(1.03)) {
+    stop("Model training sanity check failed (A/E > 100% +- 3%)")
+  }
+  
+  # expose inference data as a dataset / duckdb view called "vw_glmnet_data"
+  duckdb::duckdb_register(conn, "vw_glmnet_data", glmnet_data)
+  
+  # use decision tree as test / train summary for design_matrix_vars refinement
+  # use RPart for diagnostics
+  rpart_train <- butcher::butcher(cmd_rpart(
+    conn,
+    "vw_glmnet_data",
+    x_vars, 
+    offset_var = offset_var, 
+    y_var = y_var,
+    3,
+    0.001)
+  )
+  
+  duckdb::duckdb_unregister(conn, "vw_glmnet_data")
+  
+  # save the rpart diagnostics to the crate
+  run_model_env <- environment(run_model)
+  assign("rpart_train", rpart_train, envir=run_model_env)
+  
+  # serialize model
+  saveRDS(run_model, "run_model.rds")
+  
+  # return diagnostics to agent
+  return(
+    list(
+      "rpart_train_output" = paste(capture.output(print(rpart_train)), collapse="\n"),
+      "ae_train" = ae_train
+    ))
 }
 
 run_inference <- function() {

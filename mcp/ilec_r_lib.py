@@ -9,6 +9,7 @@ from pathlib import Path
 import logging
 import uuid
 import traceback
+import subprocess
 
 logging.basicConfig(level=logging.INFO)
 
@@ -65,13 +66,25 @@ class ILECREnvironment:
             for sql in self.db_pragmas:
                 self.rDBI.dbExecute(self.rconn, sql)
             
-            # load previous session
-            if self.last_session_guid is not None:                
-                session_path = self.work_dir / f"session_{self.last_session_guid}.RData"
-                self.log.debug(f"loading RData: '{session_path}'...")
-                if session_path.exists():
-                    r["load"](str(session_path))
-                    self.log.debug(f"loaded RData: '{session_path}'")
+            # create the session directory
+            this_session_path = self.work_dir / f"session_{self.session_guid}/"
+            this_session_path.mkdir(parents=True, exist_ok=False)
+
+            # copy the previous working directory
+            if self.last_session_guid is not None:
+                last_session_path = self.work_dir / f"session_{self.last_session_guid}/"
+                if (last_session_path.exists() and last_session_path.is_dir()):
+                    self.log.info(f"rsync {last_session_path}->{this_session_path}")
+                    subprocess.run([
+                        "rsync", "-a", str(last_session_path), str(this_session_path)],
+                        check=True)
+                else:
+                    msg = f"invalid last session guid: {last_session_path}"
+                    self.log.error(msg)
+                    raise FileNotFoundError(msg)
+            
+            # set the working directory
+            r.setwd(str(this_session_path))
 
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -119,7 +132,8 @@ class AgentRCommands:
                 q.put(None)    
         
         # easiest to run R in a separate process, avoid async headaches
-        # with multiple threads / interleaved calls to server 
+        # with multiple threads / interleaved calls to server, since R
+        # intepreter is one instance per Python process
         q = Queue()
         p = Process(target = run_target, args=list(args) + [q])
         p.start()
@@ -129,5 +143,11 @@ class AgentRCommands:
         return res
     
     @staticmethod()
-    def cmd_rpart(where_clause: str, x_vars: Iterable[str], offset: str, y_var: str, max_depth):
-        pass
+    def cmd_rpart(where_clause: str, x_vars: Iterable[str], offset: str, y_var: str, max_depth : int, cp : float):
+        return r.cmd_rpart(
+            where_clause,
+            x_vars,
+            offset,
+            y_var,
+            max_depth
+        )
