@@ -14,7 +14,18 @@ import duckdb
 from starlette.responses import PlainTextResponse
 from mcp.server.fastmcp import FastMCP, Context
 
-from multiprocessing import Process, Queue
+import asyncio
+import anyio
+from contextlib import asynccontextmanager
+
+from ilec_r_lib import ILECREnvironment as REnv, AgentRCommands as RCmd
+
+# ---- Max Work Processes ----
+MAX_WORKERS = 4
+anyio.to_thread.current_default_thread_limiter().total_tokens = MAX_WORKERS
+
+# ---- Worker directory ----
+WORKER_DIR = "/home/mike/workspace/soa-ilec/soa-ilec/mcp_agent_work/"
 
 # ---- Config ----
 PARQUET_PATH = os.environ.get("PARQUET_PATH", "/home/mike/workspace/soa-ilec/soa-ilec/data/ilec_2009_19_20210528.parquet")
@@ -31,6 +42,10 @@ SETUP_DDB = [
 ]
 for sql in SETUP_DDB:
     con.execute(sql)
+
+# ---- Default R environment setup ----
+def create_REnv(session_guid):
+    return REnv(WORKER_DIR, PARQUET_PATH, SETUP_DDB, session_guid)
 
 # ---- MCP server + tools ----
 mcp = FastMCP("ilec")
@@ -60,21 +75,7 @@ def sql(query: str, ctx: Context) -> Dict[str, Any]:
         "truncated": len(rows) > ROW_LIMIT,
         "elapsed_s": round(time.time() - t0, 3),
     }
-
-RPART_POISSON_DESC = \
-    "Runs a Poisson decision tree using rpart against the result of a sql query on ILEC_DATA table."\
-    "The where_clause argument will be used in the query SELECT * FROM ILEC_DATA WHERE <where_clause>."\
-    "all other arguments are must be valid column names from the schema of ILEC_data."\
-    "pass x_vars as a string array of column names OR an array of SQL expressions referencing valid column names. x_vars has a maximum size of 6 elements."\
-    "pass y_var as a string and a valid column name, and offset as a string and a valid column name."\
-    "The x_vars are used for GROUP BY in the sql query, and the SUM(offset) and SUM(y_var) are also computed."\
-    "The rpart formula is then 'cbind(SUM(offset),SUM(y_var)) ~ x_vars'."\
-    "max_depth and cp parameters are passed to rpart(control=rpart.control(...))."\
-    "max_depth can be a maximum of 5 (enforced)."\
-    "The function returns the output of print() on the decision tree."\
-    "yval in the output can be interpreted as an actual-to-expected ratio."\
     
-
 def fork_rpart(where_clause: str, x_vars: List[str], offset: str, y_var: str, max_depth, cp, q):
     
     print("running rpart()...\n")
@@ -138,23 +139,43 @@ def fork_rpart(where_clause: str, x_vars: List[str], offset: str, y_var: str, ma
 
     return 
 
-
-@mcp.tool(description=RPART_POISSON_DESC)
-def rpart_poisson(where_clause: str, x_vars: List[str], offset: str, y_var: str, max_depth, cp, ctx: Context) -> Dict[str, Any]:
+RPART_POISSON_DESC = \
+    "Runs a Poisson decision tree using rpart against the result of a sql query on ILEC_DATA table."\
+    "The where_clause argument will be used in the query SELECT * FROM ILEC_DATA WHERE <where_clause>."\
+    "all other arguments are must be valid column names from the schema of ILEC_data."\
+    "pass x_vars as a string array of column names OR an array of SQL expressions referencing valid column names. x_vars has a maximum size of 6 elements."\
+    "pass y_var as a string and a valid column name, and offset as a string and a valid column name."\
+    "The x_vars are used for GROUP BY in the sql query, and the SUM(offset) and SUM(y_var) are also computed."\
+    "The rpart formula is then 'cbind(SUM(offset),SUM(y_var)) ~ x_vars'."\
+    "max_depth and cp parameters are passed to rpart(control=rpart.control(...))."\
+    "max_depth can be a maximum of 5 (enforced)."\
+    "The function returns the output of print() on the decision tree."\
+    "yval in the output can be interpreted as an actual-to-expected ratio."
     
-    print(f"rpart called with arguments: {where_clause}, {x_vars}, {offset}, {y_var}, {max_depth:d}, {cp}")
-
-    q = Queue()
-    p = Process(target = fork_rpart, args=(where_clause, x_vars, offset, y_var, max_depth, cp, q))
-    p.start()
-    rpart_res = q.get()
-    p.join()
+@mcp.tool(description=RPART_POISSON_DESC)
+def rpart_poisson(session_guid: str, where_clause: str, x_vars: List[str], offset: str, y_var: str, max_depth : int, cp : float, ctx: Context) -> Dict[str, Any]:
+    
+    with create_REnv(session_guid) as r_env:
+        rpart_res = RCmd.run_command(
+            RCmd.cmd_rpart,
+            (
+                where_clause, 
+                x_vars, 
+                offset, 
+                y_var, 
+                max_depth, 
+                cp
+            ),
+            r_env
+        )
+        
     
     return {
         "print(rpart(...))" : rpart_res
     }
 
 # Build the MCP ASGI app
+
 mcp_app = mcp.streamable_http_app()  # exposes /mcp
 
 # ---- Minimal ASGI wrapper to add /health without touching lifespan ----

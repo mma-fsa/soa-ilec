@@ -212,3 +212,4 @@ data/*
 .openai_key
 .Rhistory
 .vscode/
+mcp_agent_work/*

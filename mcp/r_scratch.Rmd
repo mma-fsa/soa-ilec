@@ -12,6 +12,8 @@ library(duckdb)
 library(rpart)
 library(tidyverse)
 
+AGENT_LIB = "~/workspace/soa-ilec/soa-ilec/mcp/ilec_r_lib.R"
+
 ```
 
 ## Setup Connection
@@ -34,7 +36,23 @@ head(tbl_ilec_data)
 
 ```{r}
 
+tbl_ilec_data %>%
+  summarise(
+    max(Observation_Year)
+  )
+
+```
+
+
+```{r}
+
 df_results <- tbl_ilec_data %>%
+  mutate(
+    Smoker_Status = case_when(
+      coalesce(Smoker_Status, "UNKNOWN") == "UNKNOWN" ~ "Unismoke",
+      TRUE ~ Smoker_Status
+    )
+  ) %>%
   group_by(Gender, Insurance_Plan, Smoker_Status, Issue_Year) %>%
   summarise(
     Number_Of_Deaths = sum(Number_Of_Deaths),
@@ -44,6 +62,66 @@ df_results <- tbl_ilec_data %>%
   collect()
 
 ```
+
+## Test Agent Commands
+
+```{r}
+
+x_vars <- c("Gender", "Insurance_Plan", "Smoker_Status", "Issue_Year")
+df_model_data <- df_results
+
+# cmd_rpart <- function(x_vars, offset, y_var, max_depth, cp)
+cmd_rpart("df_model_data", x_vars, "Expected_Deaths", "Number_Of_Deaths", 3, 0.001)
+
+```
+
+
+
+```{r}
+
+source(AGENT_LIB)
+
+df_model_data <- df_results %>%
+  mutate(
+    Smoker_Status = case_when(
+      coalesce(Smoker_Status, "UNKNOWN") == "UNKNOWN" ~ "Unismoke",
+      TRUE ~ Smoker_Status
+    )
+  )
+  
+df_model_data.train <- df_model_data
+df_model_data.test <- df_model_data
+
+x_vars <- c("Gender", "Insurance_Plan", "Smoker_Status", "Issue_Year")
+design_matrix_vars <- c(
+  "Gender:Insurance_Plan",
+  "Issue_Year",
+  "Gender*Smoker_Status"
+)
+
+colnames(df_model_data)
+
+
+unique(df_model_data$Smoker_Status)
+
+cmd_glmnet(
+  x_vars,
+  design_matrix_vars,
+  list(
+    "Gender" = "Male",
+    "Smoker_Status" = "NonSmoker"
+  ),
+  list(
+    "Issue_Year" = c(1980, 2022)
+  ),
+  "Expected_Deaths",
+  "Number_Of_Deaths"
+)
+
+```
+
+
+## Rpart stuff
 
 ```{r}
 
