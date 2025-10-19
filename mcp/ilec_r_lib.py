@@ -157,11 +157,12 @@ class AgentRCommands:
     
     @staticmethod
     def cmd_run_inference(conn, dataset_in : str, dataset_out : str):
-        return r.cmd_run_inference(
+        success = r.cmd_run_inference(
             conn,
             dataset_in,
             dataset_out
         )
+        return f"created dataset {dataset_out} with predictions contained in MODEL_PRED column."
 
     @staticmethod
     def cmd_rpart(conn, dataset: str, x_vars: List[str], offset: str, y_var: str, max_depth : int, cp : float):

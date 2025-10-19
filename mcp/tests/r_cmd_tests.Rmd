@@ -55,6 +55,11 @@ DBI::dbExecute(
 ```
 
 
+```{r}
+tbl_ilec_data %>% select(Smoker_Status) %>%
+```
+
+
 ## Test Agent Functionality
 
 ```{r}
@@ -148,4 +153,13 @@ cmd_run_inference(conn, "training_data", "scored_data")
 
 ```
 
+## Validate Inference
+
+```{r}
+
+tbl_test <- tbl(conn, "read_parquet('/home/mike/workspace/soa-ilec/soa-ilec/mcp_agent_work/session_264baa4a-a2d3-443f-ab05-6031229260ee/ul_train_data_model_preds.parquet')")
+
+tbl_test %>% summarise(a = sum(Number_Of_Deaths), e = sum(MODEL_PRED))
+
+```
 

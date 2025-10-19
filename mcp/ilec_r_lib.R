@@ -93,6 +93,7 @@ cmd_run_inference <- function(conn, dataset_in, dataset_out) {
   
   system(paste0("rm -rf ", tmpdir_dataset_out))
   
+  return(TRUE)
 }
 
 # conn is setup automatically, and is a connection to a DuckDB database, 

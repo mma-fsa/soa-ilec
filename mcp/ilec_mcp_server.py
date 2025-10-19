@@ -79,16 +79,20 @@ def sql_run(query: str, ctx: Context) -> Dict[str, Any]:
 CMD_INIT_DESC = """
 Initializes a session for calls to cmd_* methods, returns a session_id. session_ids represent immutable workspaces.
 each call to a cmd_* method produces a new session_id to be used in subsequent calls if they depend on some
-change in state that occured with that method call.  This allows back-tracking to a previous state without
-side-effects from subsequent method calls.
-""".strip()
+change in state that occured with the method call, like fitting a model, creating a dataset, or running inference."
+"This allows back-tracking to a previous state without side-effects from subsequent method calls.""".strip()
 @mcp.tool(description=CMD_INIT_DESC)
 def cmd_init() -> Dict[str, Any]:
     session_id = None
     renv = create_REnv(None, no_cmd=True)
     with renv:
         session_id = renv.session_guid
-    return {"session_id": session_id, "result": "workspace created"}
+    return {
+        "session_id": session_id, 
+        "result": {
+            "success" : True,
+            "message" : "workspace created"
+        }}
 
 @mcp.tool(description="creates a new dataset. executes R code for cmd_create_dataset(). Called prior to cmd_rpart(), cmd_glmnet() and cmd_run_inference().")
 def cmd_create_dataset(session_id, dataset_name, sql) -> Dict[str, Any]:    
@@ -119,7 +123,8 @@ def cmd_run_inference(session_id, dataset_in, dataset_out) -> Dict[str, Any]:
         (
             dataset_in, 
             dataset_out            
-        )
+        ),
+        r_env
     )
     return {
         "session_id": new_session_id,
@@ -149,7 +154,8 @@ def cmd_rpart(session_id: str, dataset: str, x_vars: List[str], offset: str, y_v
     }
 
 @mcp.tool(description="executes R code for cmd_glmnet(), any subsequent calls to cmd_run_inference() will"\
-          "use this model. can only be called once in a chain of session_ids.")
+          "use this model. can only be called once in a chain of session_ids.  If it needs to be called again,"
+          "back-track to the session_id before cmd_glmnet() was called.")
 def cmd_glmnet(session_id, dataset : str, x_vars : List[str], design_matrix_vars : List[str], \
               factor_vars_levels: dict, num_var_clip : dict, offset_var : str, y_var : str, lambda_strat : str):
     r_env = create_REnv(session_id)
