@@ -38,12 +38,10 @@ cmd_create_dataset <- function(conn, dataset_name, sql) {
   
   # return dataset summary statistics
   tbl_dataset <- tbl(conn, sprintf("read_parquet('%s')", dataset_output_file))
-  
-  
+    
   ds_summary <- tbl_dataset %>%
     summarise(n_rows = n()) %>% 
     collect()
-
   
   return(list("n_rows" = ds_summary$n_rows))
 }
@@ -167,7 +165,7 @@ cmd_glmnet <- function(conn, dataset, x_vars, design_matrix_vars, factor_vars_le
   recipe_rhs <- reformulate(x_vars)
   recipe_formula <- update(recipe_rhs, y ~ .)  
   
-  prep_glmnet_data <<- recipe(
+  prep_glmnet_data <- recipe(
     recipe_formula,
     data=glmnet_data)
   
@@ -201,7 +199,7 @@ cmd_glmnet <- function(conn, dataset, x_vars, design_matrix_vars, factor_vars_le
       var_levels = sort(unique_values)
     }
     
-    prep_glmnet_data <<- prep_glmnet_data %>%
+    prep_glmnet_data <- prep_glmnet_data %>%
       step_string2factor(!!sym(cv), levels = var_levels)
   }
   
@@ -225,7 +223,7 @@ cmd_glmnet <- function(conn, dataset, x_vars, design_matrix_vars, factor_vars_le
       )
     } 
     
-    prep_glmnet_data <<- prep_glmnet_data %>%
+    prep_glmnet_data <- prep_glmnet_data %>%
       step_range(!!sym(nv), min = var_range[1], max = var_range[2])
   }
   
@@ -246,7 +244,7 @@ cmd_glmnet <- function(conn, dataset, x_vars, design_matrix_vars, factor_vars_le
   offset_vec <- log(glmnet_data$offset)
   
   # run GLMNET
-  fit_glmnet <<- glmnet::glmnet(
+  fit_glmnet <- glmnet::glmnet(
     X_mat,
     y_vec,
     family = "poisson",
@@ -289,7 +287,7 @@ cmd_glmnet <- function(conn, dataset, x_vars, design_matrix_vars, factor_vars_le
   best_lambda <- fit_glmnet$lambda[best_lambda_idx]
   
   # bundle up model into carrier crate
-  run_model <<- carrier::crate(function(df, use_offset = T) {
+  run_model <- carrier::crate(function(df, use_offset = T) {
       
       df_prepped <- recipes::bake(prep_glmnet_data, df)
       X_mat <- stats::model.matrix(dmat_formula, df_prepped)
