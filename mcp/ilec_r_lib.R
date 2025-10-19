@@ -5,10 +5,12 @@ library(butcher)
 library(carrier)
 library(rpart)
 library(rsample)
+library(arrow)
 library(tidyverse)
 
 # this should be called prior to cmd_rpart / cmd_glmnet to create data
-# conn is setup automatically, and is a connection to a DuckDB database, 
+# conn is setup automatically and is a connection to a DuckDB database, 
+# dataset name is the output file, should only create a dataset ONCE
 # only sql needs to be passed by the agent
 cmd_create_dataset <- function(conn, dataset_name, sql) {
   
@@ -48,6 +50,55 @@ cmd_create_dataset <- function(conn, dataset_name, sql) {
   }
   
   return(list(ds_summary))
+}
+
+cmd_run_inference <- function(conn, dataset_in, dataset_out) {
+  
+  if (!file.exists("run_model.rds")) {
+    stop("cmd_glmnet() must be successfully called before running cmd_run_inference()")
+  }
+  
+  run_model <- read_rds("run_model.rds")
+  
+  path_dataset_in <- paste0(getwd(), "/", dataset_in, ".parquet")
+  if (!file.exists(path_dataset_in)) {
+    stop(sprintf("dataset_in '%s' does not exist", dataset_in))
+  }
+  
+  path_dataset_out <- paste0(getwd(), "/", dataset_out, ".parquet")
+  tmpdir_dataset_out <- paste0(getwd(), "/", dataset_out)
+  
+  if (file.exists(path_dataset_out)) {
+    stop(sprintf("dataset_out '%s' already exists", dataset_out))
+  } 
+  
+  system(paste0("mkdir -p ", tmpdir_dataset_out))
+  
+  # basic streaming inference 
+  reader <- ParquetFileReader$create(path_dataset_in)
+  n_row_groups <- reader$num_row_groups
+  for (i in seq_len(n_row_groups)) {
+    # read one row group as Arrow Table
+    
+    tbl <- reader$ReadRowGroup(i - 1L)
+    tbl$MODEL_PRED <- run_model(tbl)
+    arrow::write_parquet(
+      tbl, 
+      paste0(tmpdir_dataset_out, "/", sprintf("chunk_%d.parquet", i)))
+    
+    rm(tbl); gc()
+  }
+  
+  # consolidate via duckdb()
+  sql_create_data <- sprintf(
+    "copy(select * from read_parquet('%s')) to '%s' (FORMAT PARQUET, ROW_GROUP_SIZE 100000)",
+    paste0(tmpdir_dataset_out, "/*.parquet"),
+    path_dataset_out 
+  )
+  DBI::dbExecute(conn, sql_create_data)
+  
+  system(paste0("rm -rf ", tmpdir_dataset_out))
+  
 }
 
 # conn is setup automatically, and is a connection to a DuckDB database, 
@@ -265,6 +316,7 @@ cmd_glmnet <- function(conn, dataset, x_vars, design_matrix_vars, factor_vars_le
       }
       return(as.double(pred_vec))
     },
+    dataset = dataset,
     prep_glmnet_data = prep_glmnet_data,
     fit_glmnet = fit_glmnet,
     offset_var = offset_var,
@@ -303,14 +355,17 @@ cmd_glmnet <- function(conn, dataset, x_vars, design_matrix_vars, factor_vars_le
     0.001)
   )
   
+  # remove vw_glmnet_data
   duckdb::duckdb_unregister(conn, "vw_glmnet_data")
   
   # save the rpart diagnostics to the crate
   run_model_env <- environment(run_model)
   assign("rpart_train", rpart_train, envir=run_model_env)
   
-  # serialize model
-  saveRDS(run_model, "run_model.rds")
+  # serialize model, only serialize ONCE
+  if (!file.exists("run_model.rds")) {
+    saveRDS(run_model, "run_model.rds")  
+  }
   
   # return diagnostics to agent
   return(
@@ -320,6 +375,3 @@ cmd_glmnet <- function(conn, dataset, x_vars, design_matrix_vars, factor_vars_le
     ))
 }
 
-run_inference <- function() {
-  
-}

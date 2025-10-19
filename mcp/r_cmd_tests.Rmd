@@ -128,3 +128,24 @@ cmd_glmnet(
 
 ```
 
+```{r}
+
+source(AGENT_LIB)
+setwd(AGENT_WS_DIR)
+
+cmd_run_inference(conn, "training_data", "scored_data")
+
+```
+
+```{r}
+
+  sql_create_data <- sprintf(
+    "copy(select * from read_parquet('%s')) to '%s' (FORMAT PARQUET, ROW_GROUP_SIZE 100000)",
+    "/home/mike/workspace/soa-ilec/soa-ilec/mcp_agent_work/session_abcedfg/scored_data/*.parquet",
+    "/home/mike/workspace/soa-ilec/soa-ilec/mcp_agent_work/session_abcedfg/scored_data.parquet"
+  )
+  DBI::dbExecute(conn, sql_create_data)
+
+```
+
+
