@@ -1,4 +1,4 @@
-from typing import Callable, Iterable
+from typing import Callable, Iterable, List, Any
 from multiprocessing import Process, Queue
 
 from rpy2.robjects import r, globalenv
@@ -13,15 +13,17 @@ import subprocess
 
 logging.basicConfig(level=logging.INFO)
 
-AGENT_R_LIB = "/home/mike/workspace/soa-ilec/soa-ilec/mcp/ilec_r_lib.py"
+AGENT_R_LIB = "/home/mike/workspace/soa-ilec/soa-ilec/mcp/ilec_r_lib.R"
 
 class ILECREnvironment:
 
-    def __init__(self, work_dir : str, parquet_path : str, db_pragmas : Iterable[str] = None, last_session_guid : str = None):
+    def __init__(self, work_dir : str, parquet_path : str, db_pragmas : Iterable[str] = None, last_session_guid : str = None, no_cmd=False):
     
         self.parquet_path = parquet_path
         self.db_pragmas = [] if db_pragmas is None else db_pragmas
         
+        self.no_cmd = no_cmd
+
         # load the last session if applicable
         if last_session_guid is not None and len(last_session_guid) > 0:
             self.last_session_guid = last_session_guid
@@ -53,6 +55,14 @@ class ILECREnvironment:
             raise Exception("Environment is already disposed.")
 
         if self.run_setup:
+            
+            # create the session directory
+            this_session_path = self.work_dir / f"session_{self.session_guid}/"
+            this_session_path.mkdir(parents=True, exist_ok=False)
+
+            # if this is the initial session, do nothing
+            if self.no_cmd:
+                return
 
             # init packages
             self.rduckdb = importr("duckdb")
@@ -66,10 +76,6 @@ class ILECREnvironment:
             for sql in self.db_pragmas:
                 self.rDBI.dbExecute(self.rconn, sql)
             
-            # create the session directory
-            this_session_path = self.work_dir / f"session_{self.session_guid}/"
-            this_session_path.mkdir(parents=True, exist_ok=False)
-
             # copy the previous working directory
             if self.last_session_guid is not None:
                 last_session_path = self.work_dir / f"session_{self.last_session_guid}/"
@@ -95,59 +101,83 @@ class ILECREnvironment:
         
         self.log.info("tearing down environment")
         self.disposed = True
-        
-        session_path = self.work_dir / f"session_{self.session_guid}.RData"
 
-        self.log.debug(f"saving RData: '{session_path}'...")
-
-        try:
-            r["save.image"](session_path)
-        except Exception as e:
-            tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-            self.log.error("Exception occurred:\n%s", tb_str)
-            raise
-
+# fork() entry point
+def run_target(*args):            
+    log = logging.getLogger(__name__)
+    arg_list = list(args)
+    target, r_env, q = arg_list[-3:]        
+    try:
+        with r_env:
+            r.source(AGENT_R_LIB)
+            arg_list = [r_env.rconn] + arg_list
+            q.put(target(*arg_list[:-3]))
+    except Exception as e:
+        tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+        log.error("Exception occurred:\n%s", tb_str)
+        q.put(None)    
 
 
 class AgentRCommands:    
 
     @staticmethod
     def run_command(target:Callable, args: Iterable, r_env: ILECREnvironment):        
-
-        # fork() entry point
-        def run_target(args):            
-            log = logging.getLogger(__name__)
-            arg_list = list(args)
-            q = arg_list.pop()
-            try:
-                with r_env as env:
-                    r.source(AGENT_R_LIB)
-                    q.put({
-                        "session_guid" : env.session_guid,
-                        "result" : target(*arg_list)
-                    })
-            except Exception as e:
-                tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-                log.error("Exception occurred:\n%s", tb_str)
-                q.put(None)    
-        
         # easiest to run R in a separate process, avoid async headaches
         # with multiple threads / interleaved calls to server, since R
         # intepreter is one instance per Python process
         q = Queue()
-        p = Process(target = run_target, args=list(args) + [q])
+        p = Process(target = run_target, args=list(args) + [target, r_env, q])
         p.start()
         res = q.get()
         p.join()
          
         return res
     
-    @staticmethod()
-    def cmd_rpart(where_clause: str, x_vars: Iterable[str], offset: str, y_var: str, max_depth : int, cp : float):
-        return r.cmd_rpart(
-            where_clause,
-            x_vars,
-            offset,
-            y_var,
-            max_depth
+    @staticmethod
+    def cmd_create_dataset(conn, dataset_name:str, sql:str):
+        res = r.cmd_create_dataset(
+            conn,
+            dataset_name,
+            sql
+        )        
+        results = {}
+        for k, v in res.items():
+            results[k] = v[0]
+        return results
+
+    
+    @staticmethod
+    def cmd_run_inference(conn, dataset_in : str, dataset_out : str):
+        return r.cmd_run_inference(
+            conn,
+            dataset_in,
+            dataset_out
         )
+
+    @staticmethod
+    def cmd_rpart(conn, dataset: str, x_vars: List[str], offset: str, y_var: str, max_depth : int, cp : float):
+        return r.cmd_rpart(
+            conn, 
+            dataset,
+            x_vars, 
+            offset, 
+            y_var, 
+            max_depth, 
+            cp
+        )
+    
+    @staticmethod
+    def cmd_glmnet(conn, dataset : str, x_vars : List[str], design_matrix_vars : List[str], \
+              factor_vars_levels: dict, num_var_clip : dict, offset_var : str, y_var : str, lambda_strat : str):
+        return r.cmd_rpart(
+            conn, 
+            dataset,
+            x_vars, 
+            design_matrix_vars,
+            factor_vars_levels, 
+            num_var_clip, 
+            offset_var, 
+            y_var, 
+            lambda_strat
+        )
+    

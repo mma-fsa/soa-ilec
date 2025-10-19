@@ -39,17 +39,13 @@ cmd_create_dataset <- function(conn, dataset_name, sql) {
   # return dataset summary statistics
   tbl_dataset <- tbl(conn, sprintf("read_parquet('%s')", dataset_output_file))
   
-  if (("Expected_Deaths" %in% colnames(tbl_dataset)) && ("Number_Of_Deaths" %in% colnames(tbl_dataset))) {
-    ds_summary <- tbl_dataset %>%
-      summarise(n_rows = n(), Number_Of_Deaths = sum(Number_Of_Deaths), Expected_Deaths = sum(Expected_Deaths)) %>% 
-      collect()
-  } else {
-    ds_summary <- tbl_dataset %>%
-      summarise(n_rows = n()) %>% 
-      collect()
-  }
   
-  return(list(ds_summary))
+  ds_summary <- tbl_dataset %>%
+    summarise(n_rows = n()) %>% 
+    collect()
+
+  
+  return(list("n_rows" = ds_summary$n_rows))
 }
 
 cmd_run_inference <- function(conn, dataset_in, dataset_out) {
@@ -145,7 +141,7 @@ cmd_rpart <- function(conn, dataset, x_vars, offset_var, y_var, max_depth, cp) {
 # use the variable names only in x_vars, e.g. c("x1", "x2", "x3")
 # design_matrix_vars can use transformations, e.g. c("splines::ns(x1)", "x2*x3", "x3^2")
 # factor_var_levels is a list of x_var names the default level used in the factor, e.g. list("Gender"="Male", "Smoker_Status"="NonSmoker")
-# num_var_clip clips a numeric variable at the specified range, e.g. c("Issue_Age"= c(17, 85)) clips the min at 17 and max at 85
+# num_var_clip clips a numeric variable at the specified range, e.g. list("Issue_Age"= c(17, 85)) clips the min at 17 and max at 85
 cmd_glmnet <- function(conn, dataset, x_vars, design_matrix_vars, factor_vars_levels, num_var_clip, offset_var, y_var, lambda_strat) {
   
   tbl_dataset <- tbl(conn, sprintf("read_parquet('%s.parquet')", dataset)) %>%

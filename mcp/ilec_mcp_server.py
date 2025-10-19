@@ -44,19 +44,19 @@ for sql in SETUP_DDB:
     con.execute(sql)
 
 # ---- Default R environment setup ----
-def create_REnv(session_guid):
-    return REnv(WORKER_DIR, PARQUET_PATH, SETUP_DDB, session_guid)
+def create_REnv(session_guid, no_cmd=False):
+    return REnv(WORKER_DIR, PARQUET_PATH, SETUP_DDB, session_guid, no_cmd=no_cmd)
 
 # ---- MCP server + tools ----
 mcp = FastMCP("ilec")
 
 @mcp.tool(description="Returns schema information for the ILEC_DATA table.")
-def schema(ctx: Context) -> Dict[str, str]:
+def sql_schema(ctx: Context) -> Dict[str, str]:
     rows = con.execute("PRAGMA table_info('ILEC_DATA')").fetchall()
     return {str(r[1]): str(r[2]).upper() for r in rows}
 
 @mcp.tool(description="Run a single ANSI-SQL compatible query on the ILEC_DATA table. Can only select from ILEC_DATA.  Must include LIMIT (enforced).")
-def sql(query: str, ctx: Context) -> Dict[str, Any]:
+def sql_run(query: str, ctx: Context) -> Dict[str, Any]:
     print(query)    
     t0 = time.time()
     q = (query or "").strip().rstrip(";")    
@@ -76,103 +76,101 @@ def sql(query: str, ctx: Context) -> Dict[str, Any]:
         "elapsed_s": round(time.time() - t0, 3),
     }
     
-def fork_rpart(where_clause: str, x_vars: List[str], offset: str, y_var: str, max_depth, cp, q):
-    
-    print("running rpart()...\n")
+CMD_INIT_DESC = """
+Initializes a session for calls to cmd_* methods, returns a session_id. session_ids represent immutable workspaces.
+each call to a cmd_* method produces a new session_id to be used in subsequent calls if they depend on some
+change in state that occured with that method call.  This allows back-tracking to a previous state without
+side-effects from subsequent method calls.
+""".strip()
+@mcp.tool(description=CMD_INIT_DESC)
+def cmd_init() -> Dict[str, Any]:
+    session_id = None
+    renv = create_REnv(None, no_cmd=True)
+    with renv:
+        session_id = renv.session_guid
+    return {"session_id": session_id, "result": "workspace created"}
 
-    try:
-        from rpy2.robjects import r, globalenv
-        from rpy2.robjects.packages import importr
-        
-        rduckdb = importr("duckdb")
-        rDBI = importr("DBI")
-
-        max_depth = max(1, min(max_depth, 5))
-        cp = min(1., max(0.000001, cp))
-
-        rconn = rDBI.dbConnect(rduckdb.duckdb(), ":memory:")                
-    except Exception as e:
-        q.put("Error setting up R environment: " + str(e))
-        return
-
-    if len(x_vars) > 6:
-        return {
-            "error" : "x_vars supports a maximum of 6 columns"
-        }
-
-    try:
-        for sql in SETUP_DDB:
-            rDBI.dbExecute(rconn, sql)                
-        
-        group_by_vars = ",".join(x_vars)
-        sum_vars = ",".join([
-            f"SUM(coalesce({offset}, 0)) as EXPECTED_EVENTS",
-            f"SUM(coalesce({y_var}, 0)) AS ACTUAL_EVENTS"
-        ])
-
-        data_sql = f"select {group_by_vars},{sum_vars} from ILEC_DATA where {where_clause} group by {group_by_vars}"
-        data_sql = f"with x as ({data_sql}) select * from x where EXPECTED_EVENTS > 0"
-
-        print("\n" + data_sql + "\n")
-
-        globalenv["df_results"] = rDBI.dbGetQuery(rconn, data_sql)
-
-        importr("rpart")
-        
-        formula_xvars = "+".join(x_vars)        
-
-        rpart_call = "rpart("\
-            """as.matrix(df_results[, c("EXPECTED_EVENTS","ACTUAL_EVENTS")]) ~ """\
-            f"{formula_xvars},"\
-            """data=df_results, method="poisson","""\
-            f"control=rpart.control(max_depth={max_depth:d}, cp={cp:.8f}))"        
-
-        rpart_res = r(f"capture.output(print({rpart_call}))")
-        q.put("\n".join(rpart_res))
-        
-        print("done w/: " + rpart_call)
-
-    except Exception as e:
-        q.put("Error running rpart(): " + str(e))
-    finally:
-        rDBI.dbDisconnect(rconn)
-
-    return 
-
-RPART_POISSON_DESC = \
-    "Runs a Poisson decision tree using rpart against the result of a sql query on ILEC_DATA table."\
-    "The where_clause argument will be used in the query SELECT * FROM ILEC_DATA WHERE <where_clause>."\
-    "all other arguments are must be valid column names from the schema of ILEC_data."\
-    "pass x_vars as a string array of column names OR an array of SQL expressions referencing valid column names. x_vars has a maximum size of 6 elements."\
-    "pass y_var as a string and a valid column name, and offset as a string and a valid column name."\
-    "The x_vars are used for GROUP BY in the sql query, and the SUM(offset) and SUM(y_var) are also computed."\
-    "The rpart formula is then 'cbind(SUM(offset),SUM(y_var)) ~ x_vars'."\
-    "max_depth and cp parameters are passed to rpart(control=rpart.control(...))."\
-    "max_depth can be a maximum of 5 (enforced)."\
-    "The function returns the output of print() on the decision tree."\
-    "yval in the output can be interpreted as an actual-to-expected ratio."
-    
-@mcp.tool(description=RPART_POISSON_DESC)
-def rpart_poisson(session_guid: str, where_clause: str, x_vars: List[str], offset: str, y_var: str, max_depth : int, cp : float, ctx: Context) -> Dict[str, Any]:
-    
-    with create_REnv(session_guid) as r_env:
-        rpart_res = RCmd.run_command(
-            RCmd.cmd_rpart,
-            (
-                where_clause, 
-                x_vars, 
-                offset, 
-                y_var, 
-                max_depth, 
-                cp
-            ),
-            r_env
-        )
-        
-    
+@mcp.tool(description="executes R code for cmd_create_dataset(). Called prior to cmd_rpart(), cmd_glmnet() and cmd_run_inference().")
+def cmd_create_dataset(session_id, dataset_name, sql) -> Dict[str, Any]:    
+    r_env = create_REnv(session_id)
+    new_session_id = r_env.session_guid
+    dataset_res = RCmd.run_command(
+        RCmd.cmd_create_dataset,
+        (
+            dataset_name,
+            sql
+        ),
+        r_env
+    )
     return {
-        "print(rpart(...))" : rpart_res
+        "session_id": new_session_id,
+        "result": dataset_res
     }
+
+@mcp.tool(description="executes R code for cmd_run_inference()."
+          "must be called after cmd_glmnet() in a chain of session_ids." \
+          "creates a new dataset (dataset_out) with predictions stored in the MODEL_PRED column,"\
+          "the new dataset with calls to cmd_rpart()")
+def cmd_run_inference(session_id, dataset_in, dataset_out) -> Dict[str, Any]:
+    r_env = create_REnv(session_id)
+    new_session_id = r_env.session_guid
+    dataset_res = RCmd.run_command(
+        RCmd.cmd_run_inference,
+        (
+            dataset_in, 
+            dataset_out            
+        )
+    )
+    return {
+        "session_id": new_session_id,
+        "result": dataset_res
+    }
+
+@mcp.tool(description="executes R code for cmd_rpart(), returns session_id reflecting updated workspace."\
+          "does not cause side-effects when called, so can be called as many times as necessary in a session_id chain.")
+def cmd_rpart(session_id: str, dataset: str, x_vars: List[str], offset: str, y_var: str, max_depth : int, cp : float, ctx: Context) -> Dict[str, Any]:    
+    r_env = create_REnv(session_id)
+    new_session_id = r_env.session_guid
+    dataset_res = RCmd.run_command(
+        RCmd.cmd_rpart,
+        (
+            dataset, 
+            x_vars,
+            offset, y_var, 
+            max_depth, 
+            cp
+        )
+    )
+    return {
+        "session_id": new_session_id,
+        "result": dataset_res
+    }
+
+@mcp.tool(description="executes R code for cmd_glmnet(), any subsequent calls to cmd_run_inference() will"\
+          "use this model. can only be called once in a chain of session_ids.")
+def cmd_glmnet(session_id, dataset : str, x_vars : List[str], design_matrix_vars : List[str], \
+              factor_vars_levels: dict, num_var_clip : dict, offset_var : str, y_var : str, lambda_strat : str):
+    r_env = create_REnv(session_id)
+    new_session_id = r_env.session_guid
+    dataset_res = RCmd.run_command(
+        RCmd.cmd_rpart,
+        (
+            dataset, 
+            x_vars,
+            design_matrix_vars,
+            factor_vars_levels,
+            num_var_clip,
+            offset_var,
+            y_var,
+            lambda_strat
+        )
+    )
+    return {
+        "session_id": new_session_id,
+        "result": dataset_res
+    }
+
+
 
 # Build the MCP ASGI app
 
