@@ -1,0 +1,42 @@
+import asyncio
+from fastmcp import Client
+
+async def call_mcp_tool():    
+    async with Client("http://localhost:9090/mcp") as client:
+        try:
+            # Call the 'add' tool with specific parameters
+            tool_name = "cmd_glmnet"
+            params = {
+                "session_id" : "6e2cf437-63d8-44b6-b3dd-42622eed7bb1",
+                "dataset": "ul_train_data", 
+                "x_vars": ["Gender", "Attained_Age", "Smoker_Status", "Face_Amount_Band"],
+                "design_matrix_vars" : [
+                    "(Gender:Smoker_Status) * splines::ns(Attained_Age, df=6, Boundary.knots=c(17, 95))",
+                    "Face_Amount_Band"
+                ],
+                "factor_vars_levels" : {
+                    "Gender" : "Male",
+                    "Smoker_Status" : "NonSmoker" 
+                },
+                "num_var_clip" : {
+                    "Attained_Age" : [17, 95]
+                },
+                "offset_var": "Expected_Death_QX2015VBT_by_Policy",
+                "y_var": "Number_Of_Deaths",
+                "lambda_strat" : "1se"
+            }
+            
+            print(f"Calling tool '{tool_name}' with parameters: {params}")
+
+            # Use the call_tool() method to execute the tool
+            result = await client.call_tool(tool_name, params)
+
+            # The result is a streamable object, so you can access its content
+            sum_result = result.content[0].text
+            print(f"Result from the MCP tool: {sum_result}")
+
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
+if __name__ == "__main__":
+    asyncio.run(call_mcp_tool())

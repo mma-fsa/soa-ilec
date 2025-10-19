@@ -7,9 +7,9 @@ async def call_mcp_tool():
             # Call the 'add' tool with specific parameters
             tool_name = "cmd_create_dataset"
             params = {
-                "session_id" : "604abb1f-cec0-46d3-8ea8-e029f826b869",
+                "session_id" : "a5691178-bd77-4bf9-b389-b07c4b7bc488",
                 "dataset_name": "ul_train_data", 
-                "sql": "select * from ILEC_DATA where Insurance_Plan = 'UL'"}
+                "sql": "select * from ILEC_DATA where Insurance_Plan = 'UL' and coalesce(Expected_Death_QX2015VBT_by_Policy, 0) > 0 and Smoker_Status in ('Smoker', 'NonSmoker')"}
             
             print(f"Calling tool '{tool_name}' with parameters: {params}")
 

@@ -2,7 +2,8 @@ from typing import Callable, Iterable, List, Any
 from multiprocessing import Process, Queue
 
 from rpy2.robjects import r, globalenv
-from rpy2.robjects.vectors import StrVector
+from rpy2.robjects.vectors import StrVector, FloatVector
+from rpy2.robjects import ListVector
 from rpy2.robjects.packages import importr
 
 from pathlib import Path
@@ -87,7 +88,7 @@ class ILECREnvironment:
                         check=True)
                     
                 else:
-                    msg = f"invalid last session guid: {last_session_path}"
+                    msg = f"invalid last session guid: {self.last_session_guid}"
                     self.log.error(msg)
                     raise FileNotFoundError(msg)
             
@@ -177,16 +178,24 @@ class AgentRCommands:
     
     @staticmethod
     def cmd_glmnet(conn, dataset : str, x_vars : List[str], design_matrix_vars : List[str], \
-              factor_vars_levels: dict, num_var_clip : dict, offset_var : str, y_var : str, lambda_strat : str):
-        return r.cmd_rpart(
+              factor_vars_levels: dict, num_var_clip : dict, offset_var : str, y_var : str, lambda_strat : str):                
+        
+        r_num_var_clip = ListVector({k: FloatVector(v) for k, v in num_var_clip.items()})
+
+        res = r.cmd_glmnet(
             conn, 
             dataset,
-            x_vars, 
-            design_matrix_vars,
-            factor_vars_levels, 
-            num_var_clip, 
+            StrVector(x_vars), 
+            StrVector(design_matrix_vars),
+            ListVector(factor_vars_levels),
+            r_num_var_clip,
             offset_var, 
             y_var, 
             lambda_strat
         )
+
+        return {
+            "rpart_train" : "\n".join(r["capture.output"](r.print(res[0]))),
+            "ae_train" : float(res[1][0])
+        }
     

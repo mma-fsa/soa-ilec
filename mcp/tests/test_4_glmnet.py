@@ -5,15 +5,25 @@ async def call_mcp_tool():
     async with Client("http://localhost:9090/mcp") as client:
         try:
             # Call the 'add' tool with specific parameters
-            tool_name = "cmd_rpart"
+            tool_name = "cmd_glmnet"
             params = {
-                "session_id" : "d8c16403-44e1-46cb-ae4f-12140c8e71f2",
+                "session_id" : "6e2cf437-63d8-44b6-b3dd-42622eed7bb1",
                 "dataset": "ul_train_data", 
                 "x_vars": ["Gender", "Attained_Age", "Smoker_Status", "Face_Amount_Band"],
-                "offset": "Expected_Death_QX2015VBT_by_Policy",
+                "design_matrix_vars" : [
+                    "(Gender:Smoker_Status) * splines::ns(Attained_Age, df=6, Boundary.knots=c(17, 95))",
+                    "Face_Amount_Band"
+                ],
+                "factor_vars_levels" : {
+                    "Gender" : "Male",
+                    "Smoker_Status" : "NonSmoker" 
+                },
+                "num_var_clip" : {
+                    "Attained_Age" : [17, 95]
+                },
+                "offset_var": "Expected_Death_QX2015VBT_by_Policy",
                 "y_var": "Number_Of_Deaths",
-                "max_depth": 3,
-                "cp" : 0.001
+                "lambda_strat" : "1se"
             }
             
             print(f"Calling tool '{tool_name}' with parameters: {params}")

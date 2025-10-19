@@ -155,7 +155,7 @@ def cmd_glmnet(session_id, dataset : str, x_vars : List[str], design_matrix_vars
     r_env = create_REnv(session_id)
     new_session_id = r_env.session_guid
     dataset_res = RCmd.run_command(
-        RCmd.cmd_rpart,
+        RCmd.cmd_glmnet,
         (
             dataset, 
             x_vars,
@@ -165,14 +165,13 @@ def cmd_glmnet(session_id, dataset : str, x_vars : List[str], design_matrix_vars
             offset_var,
             y_var,
             lambda_strat
-        )
+        ),
+        r_env
     )
     return {
         "session_id": new_session_id,
         "result": dataset_res
     }
-
-
 
 # Build the MCP ASGI app
 

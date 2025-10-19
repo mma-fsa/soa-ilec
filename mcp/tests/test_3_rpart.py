@@ -5,20 +5,17 @@ async def call_mcp_tool():
     async with Client("http://localhost:9090/mcp") as client:
         try:
             # Call the 'add' tool with specific parameters
-            tool_name = "rpart_poisson"
+            tool_name = "cmd_rpart"
             params = {
-                "where_clause" : "Insurance_Plan = 'UL'",
-                "x_vars": [
-                    "Gender",
-                    "Insurance_Plan",
-                    "Smoker_Status",
-                    "Issue_Year"
-                ],
-                "offset" : "ExpDeathQx2015VBTwMI_byPol",
-                "y_var" : "Number_Of_Deaths",
-                "max_depth": 5,
-                "cp": 0.0001            
+                "session_id" : "6e2cf437-63d8-44b6-b3dd-42622eed7bb1",
+                "dataset": "ul_train_data", 
+                "x_vars": ["Gender", "Attained_Age", "Smoker_Status", "Face_Amount_Band"],
+                "offset": "Expected_Death_QX2015VBT_by_Policy",
+                "y_var": "Number_Of_Deaths",
+                "max_depth": 3,
+                "cp" : 0.001
             }
+            
             print(f"Calling tool '{tool_name}' with parameters: {params}")
 
             # Use the call_tool() method to execute the tool

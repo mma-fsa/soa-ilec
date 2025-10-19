@@ -339,13 +339,12 @@ cmd_glmnet <- function(conn, dataset, x_vars, design_matrix_vars, factor_vars_le
   # expose inference data as a dataset / duckdb view called "vw_glmnet_data"
   duckdb::duckdb_register(conn, "vw_glmnet_data", glmnet_data)
   
-  # use decision tree as test / train summary for design_matrix_vars refinement
-  # use RPart for diagnostics
+  # use decision tree as test / train summary for design_matrix_vars refinement and fit diagnostics
   rpart_train <- butcher::butcher(cmd_rpart(
     conn,
     "vw_glmnet_data",
     x_vars, 
-    offset_var = offset_var, 
+    offset_var = "MODEL_PRED", 
     y_var = y_var,
     3,
     0.001)
@@ -355,7 +354,6 @@ cmd_glmnet <- function(conn, dataset, x_vars, design_matrix_vars, factor_vars_le
   duckdb::duckdb_unregister(conn, "vw_glmnet_data")
   
   # save the rpart diagnostics to the crate
-
   run_model_env <- environment(run_model)
   assign("rpart_train", rpart_train, envir=run_model_env)
   
@@ -367,7 +365,7 @@ cmd_glmnet <- function(conn, dataset, x_vars, design_matrix_vars, factor_vars_le
   # return diagnostics to agent
   return(
     list(
-      "rpart_train_output" = paste(capture.output(print(rpart_train)), collapse="\n"),
+      "rpart_train" = rpart_train,
       "ae_train" = ae_train
     ))
 }
