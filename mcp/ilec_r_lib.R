@@ -355,6 +355,7 @@ cmd_glmnet <- function(conn, dataset, x_vars, design_matrix_vars, factor_vars_le
   duckdb::duckdb_unregister(conn, "vw_glmnet_data")
   
   # save the rpart diagnostics to the crate
+
   run_model_env <- environment(run_model)
   assign("rpart_train", rpart_train, envir=run_model_env)
   

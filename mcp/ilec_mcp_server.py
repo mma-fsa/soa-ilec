@@ -90,7 +90,7 @@ def cmd_init() -> Dict[str, Any]:
         session_id = renv.session_guid
     return {"session_id": session_id, "result": "workspace created"}
 
-@mcp.tool(description="executes R code for cmd_create_dataset(). Called prior to cmd_rpart(), cmd_glmnet() and cmd_run_inference().")
+@mcp.tool(description="creates a new dataset. executes R code for cmd_create_dataset(). Called prior to cmd_rpart(), cmd_glmnet() and cmd_run_inference().")
 def cmd_create_dataset(session_id, dataset_name, sql) -> Dict[str, Any]:    
     r_env = create_REnv(session_id)
     new_session_id = r_env.session_guid
@@ -109,8 +109,8 @@ def cmd_create_dataset(session_id, dataset_name, sql) -> Dict[str, Any]:
 
 @mcp.tool(description="executes R code for cmd_run_inference()."
           "must be called after cmd_glmnet() in a chain of session_ids." \
-          "creates a new dataset (dataset_out) with predictions stored in the MODEL_PRED column,"\
-          "the new dataset with calls to cmd_rpart()")
+          "runs on an existing dataset (dataset_in)."\
+          "creates a new dataset (dataset_out) with predictions stored in the MODEL_PRED column.")
 def cmd_run_inference(session_id, dataset_in, dataset_out) -> Dict[str, Any]:
     r_env = create_REnv(session_id)
     new_session_id = r_env.session_guid
@@ -136,10 +136,12 @@ def cmd_rpart(session_id: str, dataset: str, x_vars: List[str], offset: str, y_v
         (
             dataset, 
             x_vars,
-            offset, y_var, 
-            max_depth, 
-            cp
-        )
+            offset, 
+            y_var, 
+            min(max_depth, 4), 
+            max(cp, 0.0001)
+        ),
+        r_env
     )
     return {
         "session_id": new_session_id,

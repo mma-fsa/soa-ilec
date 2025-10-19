@@ -5,11 +5,16 @@ async def call_mcp_tool():
     async with Client("http://localhost:9090/mcp") as client:
         try:
             # Call the 'add' tool with specific parameters
-            tool_name = "cmd_create_dataset"
+            tool_name = "cmd_rpart"
             params = {
-                "session_id" : "604abb1f-cec0-46d3-8ea8-e029f826b869",
-                "dataset_name": "ul_train_data", 
-                "sql": "select * from ILEC_DATA where Insurance_Plan = 'UL'"}
+                "session_id" : "d8c16403-44e1-46cb-ae4f-12140c8e71f2",
+                "dataset": "ul_train_data", 
+                "x_vars": ["Gender", "Attained_Age", "Smoker_Status", "Face_Amount_Band"],
+                "offset": "Expected_Death_QX2015VBT_by_Policy",
+                "y_var": "Number_Of_Deaths",
+                "max_depth": 3,
+                "cp" : 0.001
+            }
             
             print(f"Calling tool '{tool_name}' with parameters: {params}")
 

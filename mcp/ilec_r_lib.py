@@ -2,6 +2,7 @@ from typing import Callable, Iterable, List, Any
 from multiprocessing import Process, Queue
 
 from rpy2.robjects import r, globalenv
+from rpy2.robjects.vectors import StrVector
 from rpy2.robjects.packages import importr
 
 from pathlib import Path
@@ -82,8 +83,9 @@ class ILECREnvironment:
                 if (last_session_path.exists() and last_session_path.is_dir()):
                     self.log.info(f"rsync {last_session_path}->{this_session_path}")
                     subprocess.run([
-                        "rsync", "-a", str(last_session_path), str(this_session_path)],
+                        "rsync", "-a", f"{last_session_path}/", f"{this_session_path}/"],
                         check=True)
+                    
                 else:
                     msg = f"invalid last session guid: {last_session_path}"
                     self.log.error(msg)
@@ -111,11 +113,17 @@ def run_target(*args):
         with r_env:
             r.source(AGENT_R_LIB)
             arg_list = [r_env.rconn] + arg_list
-            q.put(target(*arg_list[:-3]))
+            q.put({
+                "success": True,
+                "result": target(*arg_list[:-3])
+            })
     except Exception as e:
         tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
         log.error("Exception occurred:\n%s", tb_str)
-        q.put(None)    
+        q.put({
+            "success" : False,
+            "message" : str(e)
+        })
 
 
 class AgentRCommands:    
@@ -156,15 +164,16 @@ class AgentRCommands:
 
     @staticmethod
     def cmd_rpart(conn, dataset: str, x_vars: List[str], offset: str, y_var: str, max_depth : int, cp : float):
-        return r.cmd_rpart(
+        res = r.cmd_rpart(
             conn, 
             dataset,
-            x_vars, 
-            offset, 
+            StrVector(x_vars), 
+            offset,
             y_var, 
             max_depth, 
             cp
         )
+        return "\n".join(r["capture.output"](r.print(res)))
     
     @staticmethod
     def cmd_glmnet(conn, dataset : str, x_vars : List[str], design_matrix_vars : List[str], \
