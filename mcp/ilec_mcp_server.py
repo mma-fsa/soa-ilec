@@ -28,7 +28,7 @@ anyio.to_thread.current_default_thread_limiter().total_tokens = MAX_WORKERS
 WORKER_DIR = "/home/mike/workspace/soa-ilec/soa-ilec/mcp_agent_work/"
 
 # ---- Config ----
-PARQUET_PATH = os.environ.get("PARQUET_PATH", "/home/mike/workspace/soa-ilec/soa-ilec/data/ilec_2009_19_20210528.parquet")
+PARQUET_PATH = os.environ.get("PARQUET_PATH", "/home/mike/workspace/soa-ilec/soa-ilec/data/ilec_perm_historical.parquet")
 ROW_LIMIT    = int(os.environ.get("ROW_LIMIT", "5000"))
 
 # ---- DuckDB ----
@@ -132,10 +132,30 @@ def cmd_run_inference(session_id, dataset_in, dataset_out) -> Dict[str, Any]:
     }
 
 @mcp.tool(description="executes R code for cmd_rpart(), returns session_id reflecting updated workspace."\
-          "does not cause side-effects when called, so can be called as many times as necessary in a session_id chain.")
+          "does not cause side-effects when called, so can be called as many times as necessary in a session_id chain."\
+          "limit x_vars to a maximum of 5 variables (enforced) and max_depth to 4.")
 def cmd_rpart(session_id: str, dataset: str, x_vars: List[str], offset: str, y_var: str, max_depth : int, cp : float, ctx: Context) -> Dict[str, Any]:    
+    
     r_env = create_REnv(session_id)
     new_session_id = r_env.session_guid
+
+    if len(x_vars) > 5:
+        return {
+            "session_id": new_session_id,
+            "result": {
+                "success": False,
+                "message": "more than 5 x_vars passed, maximum of 5"
+            }
+        }
+    if max_depth > 4:
+        return {
+            "session_id": new_session_id,
+            "result": {
+                "success": False,
+                "message": "max_depth > 4 passed, maximum of 4"
+            }
+        } 
+    
     dataset_res = RCmd.run_command(
         RCmd.cmd_rpart,
         (
