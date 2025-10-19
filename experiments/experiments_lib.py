@@ -39,7 +39,8 @@ async def prompt_ilec_data_async(prompt, model="gpt-5", max_turns=500):
 
     async with MCPServerStreamableHttp(
         name="ilec",
-        params={"url": MCP_URL, "timeout": 20},
+        client_session_timeout_seconds = 1800,
+        params={"url": MCP_URL, "timeout": 1800},
         cache_tools_list=True,
     ) as mcp_server:
         agent = Agent(
