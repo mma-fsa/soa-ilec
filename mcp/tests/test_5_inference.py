@@ -7,7 +7,7 @@ async def call_mcp_tool():
             # Call the 'add' tool with specific parameters
             tool_name = "cmd_run_inference"
             params = {
-                "session_id" : "acd1109d-8e6c-4d75-9e95-d50a50ff13b8",
+                "session_id" : "e491fd1f-892f-4f73-ba54-7427884c5238",
                 "dataset_in": "ul_train_data", 
                 "dataset_out": "ul_train_data_model_preds"
             }

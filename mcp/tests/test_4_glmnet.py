@@ -7,7 +7,7 @@ async def call_mcp_tool():
             # Call the 'add' tool with specific parameters
             tool_name = "cmd_glmnet"
             params = {
-                "session_id" : "b0cf574a-9854-4ed0-b94a-008d69bbc5df",
+                "session_id" : "33c51300-64f9-4cd8-b34b-62b27f7a38d6",
                 "dataset": "ul_train_data", 
                 "x_vars": ["Gender", "Attained_Age", "Smoker_Status", "Face_Amount_Band"],
                 "design_matrix_vars" : [

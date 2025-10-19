@@ -12,6 +12,7 @@ import logging
 import uuid
 import traceback
 import subprocess
+import os
 
 logging.basicConfig(level=logging.INFO)
 
@@ -62,6 +63,12 @@ class ILECREnvironment:
             this_session_path = self.work_dir / f"session_{self.session_guid}/"
             this_session_path.mkdir(parents=True, exist_ok=False)
 
+            # create session pointer file
+            with open(this_session_path / "session_pointer.txt", "w") as fh:
+                pointer_desc = "root" if self.last_session_guid is None \
+                    else f"\"{self.last_session_guid}\"->\"{self.session_guid}\""
+                fh.write(pointer_desc)                
+
             # if this is the initial session, do nothing
             if self.no_cmd:
                 return
@@ -83,8 +90,34 @@ class ILECREnvironment:
                 last_session_path = self.work_dir / f"session_{self.last_session_guid}/"
                 if (last_session_path.exists() and last_session_path.is_dir()):
                     self.log.info(f"rsync {last_session_path}->{this_session_path}")
+                    
+                    # first pass, symlink parquet files
+                    symlink_files = list(last_session_path.rglob("*.parquet")) + \
+                        list(last_session_path.rglob("*.rds"))
+
+                    for f in symlink_files:
+                        rel = f.relative_to(last_session_path)
+                        link_path = this_session_path / rel
+                        link_path.parent.mkdir(parents=True, exist_ok=True)
+                        if link_path.exists():
+                            link_path.unlink()
+                        os.symlink(f, link_path)
+                    
+                    for f in last_session_path.rglob("*.parquet"):
+                        rel = f.relative_to(last_session_path)
+                        link_path = this_session_path / rel
+                        link_path.parent.mkdir(parents=True, exist_ok=True)
+                        if link_path.exists():
+                            link_path.unlink()
+                        os.symlink(f, link_path)
+
+                    # second pass, copy files
                     subprocess.run([
-                        "rsync", "-a", f"{last_session_path}/", f"{this_session_path}/"],
+                        "rsync", "-a",                        
+                        "--exclude=*.parquet",
+                        "--exclude=*.rds",
+                        "--exclude=session_pointer.txt",
+                        f"{last_session_path}/", f"{this_session_path}/"],
                         check=True)
                     
                 else:

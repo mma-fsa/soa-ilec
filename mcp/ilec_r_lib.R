@@ -143,6 +143,10 @@ cmd_rpart <- function(conn, dataset, x_vars, offset_var, y_var, max_depth, cp) {
 # num_var_clip clips a numeric variable at the specified range, e.g. list("Issue_Age"= c(17, 85)) clips the min at 17 and max at 85
 cmd_glmnet <- function(conn, dataset, x_vars, design_matrix_vars, factor_vars_levels, num_var_clip, offset_var, y_var, lambda_strat) {
   
+  if (file.exists("run_model.rds")) {
+    stop("model already exists, can only call cmd_glmnet() once per session_id chain, backtrack to session_id before call to cmd_glmnet()")
+  }
+
   tbl_dataset <- tbl(conn, sprintf("read_parquet('%s.parquet')", dataset)) %>%
       group_by(across(all_of(x_vars))) %>%
       summarise(
