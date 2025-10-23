@@ -7,7 +7,7 @@ async def call_mcp_tool():
             # Call the 'add' tool with specific parameters
             tool_name = "cmd_rpart"
             params = {
-                "session_id" : "f981b64f-6a7b-4ab4-bd8b-b97c3d7edf49",
+                "session_id" : "3afc4eda-2a56-44fe-bdec-6fcdf6bcf364",
                 "dataset": "ul_train_data", 
                 "x_vars": ["Gender", "Attained_Age", "Smoker_Status", "Face_Amount_Band"],
                 "offset": "Expected_Death_QX2015VBT_by_Policy",

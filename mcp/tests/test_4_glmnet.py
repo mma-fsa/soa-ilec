@@ -7,11 +7,12 @@ async def call_mcp_tool():
             # Call the 'add' tool with specific parameters
             tool_name = "cmd_glmnet"
             params = {
-                "session_id" : "33c51300-64f9-4cd8-b34b-62b27f7a38d6",
+                "session_id" : "8e60d720-310c-4f8b-8a33-c7e17da8bc1f",
                 "dataset": "ul_train_data", 
                 "x_vars": ["Gender", "Attained_Age", "Smoker_Status", "Face_Amount_Band"],
                 "design_matrix_vars" : [
-                    "(Gender:Smoker_Status) * splines::ns(Attained_Age, knots=c(30, 40, 50, 60, 70, 80), Boundary.knots=c(17, 95))",
+                    "Gender * splines::ns(Attained_Age, knots=c(30, 40, 50, 60, 70, 80), Boundary.knots=c(17, 95))",
+                    "Smoker_Status",
                     "Face_Amount_Band"
                 ],
                 "factor_vars_levels" : {

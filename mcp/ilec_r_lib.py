@@ -5,6 +5,7 @@ from rpy2.robjects import r, globalenv
 from rpy2.robjects.vectors import StrVector, FloatVector
 from rpy2.robjects import ListVector
 from rpy2.robjects.packages import importr
+from rpy2.rinterface_lib.embedded import endr
 
 from pathlib import Path
 
@@ -14,6 +15,7 @@ import traceback
 import subprocess
 import os
 import json
+import sys
 
 logging.basicConfig(level=logging.INFO)
 
@@ -215,7 +217,8 @@ def run_target(*args):
     finally:        
         res = res if res is not None else {"success": False, "message": "unknown error"}
         q.put(res)
-        r.quit()
+        endr()
+        sys.exit(0)
 
 
 class AgentRCommands:    
