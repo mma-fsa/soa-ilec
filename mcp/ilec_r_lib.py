@@ -14,8 +14,9 @@ import uuid
 import traceback
 import subprocess
 import os
-import json
 import sys
+
+from audit import AuditLogEntry
 
 logging.basicConfig(level=logging.INFO)
 
@@ -142,40 +143,6 @@ class ILECREnvironment:
         self.log.info("tearing down environment")
         self.disposed = True    
 
-class AuditLogEntry:
-
-    def __init__(self, r_env):        
-        self.last_session_guid = r_env.last_session_guid \
-            if r_env.last_session_guid is not None else ""        
-        self.session_guid = r_env.session_guid
-        self.audit_log_dir = r_env.this_session_path
-
-    def log_tool_call(self, tool_name, args, result):        
-        audit_log_entry = {
-            "last_session_guid": self.last_session_guid,
-            "this_session_guid": self.session_guid,
-            "tool_name" : tool_name,
-            "args" : args,
-            "result" : result
-        }
-        with open(self.audit_log_dir / "tool_call.json", "w") as fh:
-            json.dump(audit_log_entry, fh, indent=2)
-    
-class AuditLogReader:
-
-    def __init__(self, work_dir):
-        self.work_dir = Path(str(work_dir))
-
-    def traverse_audit_log(self, final_session_id):                
-        audit_log_path = self._traverse_to_root(final_session_id)
-
-    def _traverse_to_root(self, session_id):        
-        while True:
-            pass
-
-    def _get_node_log(self, session_id):
-        pass        
-    
 # fork() entry point
 def run_target(*args):                    
     
