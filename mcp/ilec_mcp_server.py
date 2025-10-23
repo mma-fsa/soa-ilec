@@ -28,7 +28,8 @@ anyio.to_thread.current_default_thread_limiter().total_tokens = MAX_WORKERS
 WORKER_DIR = "/home/mike/workspace/soa-ilec/soa-ilec/mcp_agent_work/"
 
 # ---- Config ----
-PARQUET_PATH = os.environ.get("PARQUET_PATH", "/home/mike/workspace/soa-ilec/soa-ilec/data/ilec_perm_historical.parquet")
+#PARQUET_PATH = os.environ.get("PARQUET_PATH", "/home/mike/workspace/soa-ilec/soa-ilec/data/ilec_perm_historical.parquet")
+PARQUET_PATH = os.environ.get("PARQUET_PATH", "/home/mike/workspace/soa-ilec/soa-ilec/data/ilec_2009_19_20210528.parquet")
 ROW_LIMIT    = int(os.environ.get("ROW_LIMIT", "5000"))
 
 # ---- DuckDB ----

@@ -13,6 +13,7 @@ import uuid
 import traceback
 import subprocess
 import os
+import json
 
 logging.basicConfig(level=logging.INFO)
 
@@ -41,6 +42,7 @@ class ILECREnvironment:
         # create a session id for this object
         self.session_guid = str(uuid.uuid4())
         self.log = logging.getLogger(__name__)
+        self.this_session_path = self.work_dir / f"session_{self.session_guid}/"
 
         # these should get set by enter()
         self.rduckdb = None
@@ -60,7 +62,7 @@ class ILECREnvironment:
         if self.run_setup:
             
             # create the session directory
-            this_session_path = self.work_dir / f"session_{self.session_guid}/"
+            this_session_path = self.this_session_path
             this_session_path.mkdir(parents=True, exist_ok=False)
 
             # create session pointer file
@@ -116,6 +118,7 @@ class ILECREnvironment:
                         "rsync", "-a",                        
                         "--exclude=*.parquet",
                         "--exclude=*.rds",
+                        "--exclude=*.json",
                         "--exclude=session_pointer.txt",
                         f"{last_session_path}/", f"{this_session_path}/"],
                         check=True)
@@ -129,35 +132,90 @@ class ILECREnvironment:
             r.setwd(str(this_session_path))
 
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        
+    def __exit__(self, exc_type, exc_val, exc_tb):                
         if exc_type is not None:            
             nice_tb = "".join(traceback.format_exception(exc_type, exc_val, exc_tb))
             self.log.error(nice_tb)            
         
         self.log.info("tearing down environment")
-        self.disposed = True
+        self.disposed = True    
 
+class AuditLogEntry:
+
+    def __init__(self, r_env):        
+        self.last_session_guid = r_env.last_session_guid \
+            if r_env.last_session_guid is not None else ""        
+        self.session_guid = r_env.session_guid
+        self.audit_log_dir = r_env.this_session_path
+
+    def log_tool_call(self, tool_name, args, result):        
+        audit_log_entry = {
+            "last_session_guid": self.last_session_guid,
+            "this_session_guid": self.session_guid,
+            "tool_name" : tool_name,
+            "args" : args,
+            "result" : result
+        }
+        with open(self.audit_log_dir / "tool_call.json", "w") as fh:
+            json.dump(audit_log_entry, fh, indent=2)
+    
+class AuditLogReader:
+
+    def __init__(self, work_dir):
+        self.work_dir = Path(str(work_dir))
+
+    def traverse_audit_log(self, final_session_id):                
+        audit_log_path = self._traverse_to_root(final_session_id)
+
+    def _traverse_to_root(self, session_id):        
+        while True:
+            pass
+
+    def _get_node_log(self, session_id):
+        pass        
+    
 # fork() entry point
-def run_target(*args):            
+def run_target(*args):                    
+    
+    res = None    
     log = logging.getLogger(__name__)
     arg_list = list(args)
-    target, r_env, q = arg_list[-3:]        
-    try:
-        with r_env:
+
+    if (len(args) >= 3):
+        target, r_env, q = arg_list[-3:]
+        target_args = arg_list[:-3]
+    else:
+        err_msg = "Error parsing run_target args"
+        log.error(err_msg)
+        raise Exception(err_msg)
+
+    try:        
+        
+        audit = AuditLogEntry(r_env)
+        tool_name = target.__name__
+        with r_env:                        
             r.source(AGENT_R_LIB)
-            arg_list = [r_env.rconn] + arg_list
-            q.put({
+            R_arg_list = [r_env.rconn] + target_args
+            # call tool
+            res = {
                 "success": True,
-                "result": target(*arg_list[:-3])
-            })
+                "result": target(*R_arg_list)
+            }
+        audit.log_tool_call(tool_name, target_args, res)
+    
     except Exception as e:
         tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-        log.error("Exception occurred:\n%s", tb_str)
-        q.put({
+        log.error(f"Exception occurred in tool call: {tool_name}\n{tb_str}",  )        
+        res = {
             "success" : False,
             "message" : str(e)
-        })
+        }
+        audit.log_tool_call(tool_name, target_args, res)
+    
+    finally:        
+        res = res if res is not None else {"success": False, "message": "unknown error"}
+        q.put(res)
+        r.quit()
 
 
 class AgentRCommands:    
