@@ -1,13 +1,14 @@
 import asyncio
 from fastmcp import Client
 
+
 async def call_mcp_tool():    
     async with Client("http://localhost:9090/mcp") as client:
         try:
             # Call the 'add' tool with specific parameters
             tool_name = "cmd_rpart"
             params = {
-                "session_id" : "3afc4eda-2a56-44fe-bdec-6fcdf6bcf364",
+                "workspace_id" : "488d8c35-8f1a-4e08-b28c-97f68e1e7bed",
                 "dataset": "ul_train_data", 
                 "x_vars": ["Gender", "Attained_Age", "Smoker_Status", "Face_Amount_Band"],
                 "offset": "Expected_Death_QX2015VBT_by_Policy",

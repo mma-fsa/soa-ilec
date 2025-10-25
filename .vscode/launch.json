@@ -1,0 +1,56 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        
+        {
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Debug MCP Server",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "cwd": "${workspaceFolder}/mcp", 
+            "args": [
+                "ilec_mcp_server:app",  // module path to your FastAPI app
+                "--reload",             // auto-reload on code changes
+                "--port", "9090",       // optional
+                "--host", "127.0.0.1"
+            ],
+            "jinja": true,
+            "console": "integratedTerminal",
+            "env": {
+                "UVICORN_DEBUG": "1",
+                "PYTHONPATH": "${workspaceFolder}/common${pathSeparator}${env:PYTHONPATH}"
+            },
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "name": "Debug UI",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "cwd": "${workspaceFolder}/app_ui", 
+            "args": [
+                "app_ui:app",  // module path to your FastAPI app
+                "--reload",             // auto-reload on code changes
+                "--port", "8085",       // optional
+                "--host", "127.0.0.1"
+            ],
+            "jinja": true,
+            "console": "integratedTerminal",
+            "env": {
+                "UVICORN_DEBUG": "1",
+                "PYTHONPATH": "${workspaceFolder}/common${pathSeparator}${env:PYTHONPATH}"
+            },
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}
