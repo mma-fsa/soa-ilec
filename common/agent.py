@@ -33,7 +33,7 @@ class AssumptionsAgent:
             cache_tools_list=True,
         ) as mcp_server:
             agent = Agent(
-                name=self.__name__,
+                name=str(self.__class__),
                 instructions=self.instructions,
                 mcp_servers=[mcp_server],
                 model=self.model,
