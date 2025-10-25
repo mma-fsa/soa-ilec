@@ -18,41 +18,97 @@ import asyncio
 import anyio
 from contextlib import asynccontextmanager
 from pathlib import Path
+from collections import defaultdict
+
+import threading, sqlite3
 
 from ilec_r_lib import ILECREnvironment as REnv, AgentRCommands as RCmd
 
-# ---- Max Work Processes ----
-MAX_WORKERS = 4
-anyio.to_thread.current_default_thread_limiter().total_tokens = MAX_WORKERS
+# ---- Init ----
+thread_local = threading.local()
 
-# ---- Worker directory ----
-WORKER_DIR = "/home/mike/workspace/soa-ilec/soa-ilec/mcp_agent_work/"
+# ---- Admin Settings ( move to environment vars) ----
+MAX_SERVER_WORKERS = 4
+anyio.to_thread.current_default_thread_limiter().total_tokens = MAX_SERVER_WORKERS
 
-# ---- Config ----
-PARQUET_PATH = os.environ.get("PARQUET_PATH", "/home/mike/workspace/soa-ilec/soa-ilec/data/ilec_perm_historical.parquet")
-#PARQUET_PATH = os.environ.get("PARQUET_PATH", "/home/mike/workspace/soa-ilec/soa-ilec/data/ilec_2009_19_20210528.parquet")
-ROW_LIMIT    = int(os.environ.get("ROW_LIMIT", "5000"))
+DEFAULT_DDB_WORKERS = os.cpu_count() or 4
+DEFAULT_DDB_MEM = "16GB"
+DEFAULT_DDB_PATH = "/home/mike/workspace/soa-ilec/soa-ilec/data/ilec_data.duckdb"
 
-# ---- DuckDB ----
-con = duckdb.connect(config={"threads": os.cpu_count() or 4})
+DEFAULT_ILEC_PQ_LOCATION = "/home/mike/workspace/soa-ilec/soa-ilec/data/ilec_2009_19_20210528.parquet"
+DEFAULT_DDB_INIT_SQL = "create view if not exists ILEC_DATA as "\
+    f"(select * from read_parquet('{DEFAULT_ILEC_PQ_LOCATION}'))"
 
-SETUP_DDB = [    
-    "PRAGMA disable_progress_bar",
-    "PRAGMA memory_limit='16GB'",
-    f"PRAGMA threads={os.cpu_count() or 4}",
-    f"CREATE VIEW ILEC_DATA AS SELECT * FROM read_parquet('{PARQUET_PATH}')"
-]
-for sql in SETUP_DDB:
-    con.execute(sql)
+# ---- Default Session Settings, stuff the client can change ----
+DEFAULT_SESSION_SETTINGS = {
+    "MCP_WORK_DIR" : "/home/mike/workspace/soa-ilec/soa-ilec/mcp_agent_work/",
+    "SQL_ROW_LIMIT" : 5000,
+    "MODEL_DB": DEFAULT_DDB_PATH,
+    "MODEL_DATA_VW" : "ILEC_DATA"    
+}
+
+# ---- Session + DuckDB connection mgmt ----
+def get_user_session():
+    
+    if not hasattr(thread_local, "settings_conn"):
+        thread_local.settings_conn = sqlite3.connect("settings.db", check_same_thread=False)
+        thread_local.settings_conn.execute("PRAGMA journal_mode=WAL;")
+            
+    settings = defaultdict(lambda: None, DEFAULT_SESSION_SETTINGS)
+    
+    cur = thread_local.settings_conn.cursor()    
+    
+    # load and validate session data
+    cur.execute("SELECT key, value FROM settings")
+    for k,v in cur.fetchall():
+        if not k in DEFAULT_SESSION_SETTINGS.keys():
+            raise Exception(f"unrecognized session key: {k}")
+        settings[k] = v
+
+    return settings    
+
+def get_duckdb_conn(user_session):
+
+    run_setup = False
+    if not hasattr(thread_local, "ddb_conn"):
+        thread_local.ddb_conn = duckdb.connect(config={"threads": DEFAULT_DDB_WORKERS})
+        run_setup = True
+        
+    ddb_conn = thread_local.ddb_conn
+
+    if run_setup:
+        ddb_conn.execute("PRAGMA disable_progress_bar")
+        ddb_conn.execute(f"PRAGMA memory_limit='{DEFAULT_DDB_MEM}'")        
+        ddb_conn.execute(DEFAULT_DDB_INIT_SQL)
+
+    return ddb_conn
 
 # ---- Default R environment setup ----
 def create_REnv(session_guid, no_cmd=False):
-    return REnv(WORKER_DIR, PARQUET_PATH, SETUP_DDB, session_guid, no_cmd=no_cmd)
+    session_settings = get_user_session()
+
+    return REnv(
+        session_settings[""], 
+        session_settings[""], 
+        [
+            "PRAGMA disable_progress_bar",
+            f"PRAGMA memory_limit='{DEFAULT_DDB_MEM}'",
+            DEFAULT_DDB_INIT_SQL
+        ], 
+        session_guid, 
+        no_cmd=no_cmd
+    )
 
 # ---- MCP server + tools ----
 mcp = FastMCP("ilec")
 
-@mcp.tool(description="Returns schema information for the ILEC_DATA table.")
+@mcp.tool(description="Returns available tables")
+def sql_schema(ctx: Context) -> Dict[str, str]:
+    rows = con.execute("PRAGMA table_info('ILEC_DATA')").fetchall()
+    return {str(r[1]): str(r[2]).upper() for r in rows}
+
+
+@mcp.tool(description="Returns schema information for the specified table.")
 def sql_schema(ctx: Context) -> Dict[str, str]:
     rows = con.execute("PRAGMA table_info('ILEC_DATA')").fetchall()
     return {str(r[1]): str(r[2]).upper() for r in rows}
