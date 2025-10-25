@@ -5,8 +5,8 @@ async def call_mcp_tool():
     async with Client("http://localhost:9090/mcp") as client:
         try:
             # Call the 'add' tool with specific parameters
-            tool_name = "sql"
-            params = {"query": "select * from ILEC_DATA limit 1"}
+            tool_name = "sql_schema"
+            params = {"table_name" : "ILEC_DATA"}
             print(f"Calling tool '{tool_name}' with parameters: {params}")
 
             # Use the call_tool() method to execute the tool

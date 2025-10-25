@@ -11,7 +11,6 @@ from collections import deque
 
 context_window = None
 
-
 base_instructions = "You are assisting an actuary performing data analysis and predictive modeling on life insurance data."\
     "You may call any available MCP tools like sql_schema, sql_run, cmd_init(), etc."\
     "The cmd_* methods are implemented using the following R code: \n"

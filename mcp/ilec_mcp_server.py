@@ -7,159 +7,170 @@ Run:
 POST to:
   http://127.0.0.1:8000/mcp
 """
-import os, time
-from typing import Any, Dict, List
 
-import duckdb
+import time, re, uuid, json
+from typing import Any, Dict, List
 from starlette.responses import PlainTextResponse
 from mcp.server.fastmcp import FastMCP, Context
-
-import asyncio
-import anyio
-from contextlib import asynccontextmanager
 from pathlib import Path
-from collections import defaultdict
 
-import threading, sqlite3
-
+# ---- local imports ----
 from ilec_r_lib import ILECREnvironment as REnv, AgentRCommands as RCmd
+from app_shared import Database, AppSession
+from env_vars import DEFAULT_DDB_ROW_LIMIT
 
-# ---- Init ----
-thread_local = threading.local()
+# ---- MCP Tool Descriptions ----
+SQL_SCHEMA_DESC = "Returns database schema information for the table_name argument."\
+    "Useful for sql_run() and cmd_create_dataset()."
 
-# ---- Admin Settings ( move to environment vars) ----
-MAX_SERVER_WORKERS = 4
-anyio.to_thread.current_default_thread_limiter().total_tokens = MAX_SERVER_WORKERS
+SQL_RUN_DESC = "Provide a short description of your rationale for this tool call via the desc argument."\
+    "Use the query argument to run a single duckdb compatible select statement."\
+    f"Do not use CTEs. Must include LIMIT with no greater than {DEFAULT_DDB_ROW_LIMIT} records (enforced)."
 
-DEFAULT_DDB_WORKERS = os.cpu_count() or 4
-DEFAULT_DDB_MEM = "16GB"
-DEFAULT_DDB_PATH = "/home/mike/workspace/soa-ilec/soa-ilec/data/ilec_data.duckdb"
+CMD_INIT_DESC = """Initializes an immutable workspace for calls to cmd_* methods, returns a workspace_id."""\
+    """each call to a cmd_* method produces a new workspace_id to be used in subsequent calls if they depend on some """\
+    """change in state occuring due to that method call, like fitting a model, creating a dataset, or running inference."""\
+    """This allows back-tracking via workspace_ids to a previous state without side-effects from subsequent method calls."""
 
-DEFAULT_ILEC_PQ_LOCATION = "/home/mike/workspace/soa-ilec/soa-ilec/data/ilec_2009_19_20210528.parquet"
-DEFAULT_DDB_INIT_SQL = "create view if not exists ILEC_DATA as "\
-    f"(select * from read_parquet('{DEFAULT_ILEC_PQ_LOCATION}'))"
+CMD_CREATE_DATASET_DESC = "creates a new dataset. executes R code for cmd_create_dataset()."\
+    "Called prior to cmd_rpart(), cmd_glmnet() and cmd_run_inference()."
 
-# ---- Default Session Settings, stuff the client can change ----
-DEFAULT_SESSION_SETTINGS = {
-    "MCP_WORK_DIR" : "/home/mike/workspace/soa-ilec/soa-ilec/mcp_agent_work/",
-    "SQL_ROW_LIMIT" : 5000,
-    "MODEL_DB": DEFAULT_DDB_PATH,
-    "MODEL_DATA_VW" : "ILEC_DATA"    
-}
+CMD_RUN_INFERENCE_DESC = "executes R code for cmd_run_inference()."\
+    "must be called after cmd_glmnet() in a chain of workspace_ids." \
+    "runs on an existing dataset (dataset_in)."\
+    "creates a new dataset (dataset_out) with predictions stored in the MODEL_PRED column."
 
-# ---- Session + DuckDB connection mgmt ----
-def get_user_session():
-    
-    if not hasattr(thread_local, "settings_conn"):
-        thread_local.settings_conn = sqlite3.connect("settings.db", check_same_thread=False)
-        thread_local.settings_conn.execute("PRAGMA journal_mode=WAL;")
-            
-    settings = defaultdict(lambda: None, DEFAULT_SESSION_SETTINGS)
-    
-    cur = thread_local.settings_conn.cursor()    
-    
-    # load and validate session data
-    cur.execute("SELECT key, value FROM settings")
-    for k,v in cur.fetchall():
-        if not k in DEFAULT_SESSION_SETTINGS.keys():
-            raise Exception(f"unrecognized session key: {k}")
-        settings[k] = v
+CMD_RPART_DESC = "executes R code for cmd_rpart(), returns workspace_id reflecting updated workspace."\
+    "does not cause side-effects when called, so can be called as many times as necessary in a workspace_id chain."\
+    "limit x_vars to a maximum of 5 variables (enforced) and max_depth to 4."
 
-    return settings    
-
-def get_duckdb_conn(user_session):
-
-    run_setup = False
-    if not hasattr(thread_local, "ddb_conn"):
-        thread_local.ddb_conn = duckdb.connect(config={"threads": DEFAULT_DDB_WORKERS})
-        run_setup = True
-        
-    ddb_conn = thread_local.ddb_conn
-
-    if run_setup:
-        ddb_conn.execute("PRAGMA disable_progress_bar")
-        ddb_conn.execute(f"PRAGMA memory_limit='{DEFAULT_DDB_MEM}'")        
-        ddb_conn.execute(DEFAULT_DDB_INIT_SQL)
-
-    return ddb_conn
+CMD_GLMNET_DESC = "executes R code for cmd_glmnet(), any subsequent calls to cmd_run_inference() will"\
+    "use this model. can only be called once in a chain of workspace_ids. If it needs to be called again,"\
+    "back-track to the workspace_id before cmd_glmnet() was called."
 
 # ---- Default R environment setup ----
-def create_REnv(session_guid, no_cmd=False):
-    session_settings = get_user_session()
-
-    return REnv(
-        session_settings[""], 
-        session_settings[""], 
-        [
-            "PRAGMA disable_progress_bar",
-            f"PRAGMA memory_limit='{DEFAULT_DDB_MEM}'",
-            DEFAULT_DDB_INIT_SQL
-        ], 
-        session_guid, 
-        no_cmd=no_cmd
-    )
+def create_REnv(workspace_id, no_cmd=False):
+    with Database.get_session_conn() as con:
+        session = AppSession(con)
+        return REnv(
+            work_dir=session["MCP_WORK_DIR"],
+            db_pragmas=Database.DDB_PRAGMAS,
+            last_workspace_id=workspace_id,
+            no_cmd=no_cmd
+        )
 
 # ---- MCP server + tools ----
 mcp = FastMCP("ilec")
 
-@mcp.tool(description="Returns available tables")
-def sql_schema(ctx: Context) -> Dict[str, str]:
-    rows = con.execute("PRAGMA table_info('ILEC_DATA')").fetchall()
-    return {str(r[1]): str(r[2]).upper() for r in rows}
+@mcp.tool(description=SQL_SCHEMA_DESC)
+def sql_schema(table_name : str, ctx: Context) -> Dict[str, Any]:
 
+    # CAUTION: PRAMGA's don't support prepared statements,
+    # doing the best we can with regexp
+    DUCKDB_IDENTIFIER_RE = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
 
-@mcp.tool(description="Returns schema information for the specified table.")
-def sql_schema(ctx: Context) -> Dict[str, str]:
-    rows = con.execute("PRAGMA table_info('ILEC_DATA')").fetchall()
-    return {str(r[1]): str(r[2]).upper() for r in rows}
+    if DUCKDB_IDENTIFIER_RE.match(table_name):
+        try:
+            with Database.get_duckdb_conn() as con:
+                rows = con.execute(f"PRAGMA table_info({table_name})").fetchall()
+            res = {
+                "success" : True,
+                "schema" : {str(r[1]): str(r[2]).upper() for r in rows}
+            }
+        except Exception as e:
+            res = {
+                "success" : False,
+                "message" : str(e)
+            }
+    else:
+        res = {
+            "success" : False,
+            "message" : f"Provided table_name is not a valid duckdb identifier '{table_name}'"
+        }
 
-@mcp.tool(description="Run a single ANSI-SQL compatible query on the ILEC_DATA table. Can only select from ILEC_DATA.  Must include LIMIT (enforced).")
-def sql_run(query: str, ctx: Context) -> Dict[str, Any]:
+    return res
 
-    # logging
-    t0 = time.time()
-    with open(Path(WORKER_DIR) / Path("sql_run.log"), "a+") as fh:
-        fh.write("\nRunning query...\n")
-        fh.write(query + "\n")         
-        q = (query or "").strip().rstrip(";")    
-        try:        
-            res = con.execute(q)
-            fh.write("\n\tquery done")
-        except:
-            fh.write("\n\tquery error")
-            raise
+@mcp.tool(description=SQL_RUN_DESC)
+def sql_run(desc : str, query: str, ctx: Context) -> Dict[str, Any]:
+
+    DUCKDB_SELECT_STMT = re.compile(r'(?is)^\s*select\b[^;]*\blimit\s+\d+\s*(?:offset\s+\d+\s*)?;?\s*$')
+
+    if not DUCKDB_SELECT_STMT.match(query):
+        return {
+            "success" : False,
+            "message" : "Not a valid duckdb select query w/ a limit clause."
+        }
     
-    cols = [d[0] for d in res.description]
-    rows = res.fetchmany(ROW_LIMIT + 1)
-    return {
-        "columns": cols,
-        "rows": rows[:ROW_LIMIT],
-        "truncated": len(rows) > ROW_LIMIT,
-        "elapsed_s": round(time.time() - t0, 3),
-    }
+    # helper func for running sql query
+    def run_query(ddb_con, desc, query):
+        t0 = time.time()
+        clean_query = query.strip().rstrip(";")
+        try:
+            query_res = ddb_con.execute(clean_query)
+            cols = [d[0] for d in query_res.description]
+            rows = query_res.fetchmany(DEFAULT_DDB_ROW_LIMIT + 1)
+            res = {
+                "success" : True,
+                "desc" : desc,
+                "query" : clean_query,
+                "results" : {
+                    "columns": cols,
+                    "rows": rows[:DEFAULT_DDB_ROW_LIMIT],
+                    "truncated": len(rows) > DEFAULT_DDB_ROW_LIMIT,
+                    "elapsed_s": round(time.time() - t0, 3),
+                }                
+            }
+        except Exception as e:
+            res = {
+                "success" : False,
+                "desc" : desc,
+                "query" : clean_query,
+                "message" : str(e)
+            }
+        return res        
+
+    # get session data   
+    with Database.get_session_conn() as sess_con:
+        session_data = AppSession(sess_con)._get_data()
+
+    sql_log_dir = Path(session_data["MCP_WORK_DIR"]) / Path("sql_run")
+    if not sql_log_dir.exists():
+        # allow for inter-leaved calls via exist_ok = True
+        sql_log_dir.mkdir(parents=True, exist_ok=True)
     
-CMD_INIT_DESC = """
-Initializes a session for calls to cmd_* methods, returns a session_id. session_ids represent immutable workspaces.
-each call to a cmd_* method produces a new session_id to be used in subsequent calls if they depend on some
-change in state that occured with the method call, like fitting a model, creating a dataset, or running inference."
-"This allows back-tracking to a previous state without side-effects from subsequent method calls.""".strip()
+    # run query + create audit log entry
+    with Database.get_duckdb_conn() as ddb_con:
+        query_id = uuid.uuid4()
+        query_log_file = sql_log_dir / Path(f"query_{query_id}.json")
+        with open(query_log_file.resolve(), "w") as log_fh:
+            query_res = run_query(ddb_con, desc, query)
+            log_entry = {
+                "success" : query_res["success"],                
+                "desc" : desc,
+                "query" : query
+            }            
+            json.dump(log_entry, log_fh)
+        
+    return query_res
+    
 @mcp.tool(description=CMD_INIT_DESC)
 def cmd_init() -> Dict[str, Any]:
-    session_id = None
+    workspace_id = None
     renv = create_REnv(None, no_cmd=True)
     with renv:
-        session_id = renv.session_guid
+        workspace_id = renv.workspace_id
     return {
-        "session_id": session_id, 
+        "workspace_id": workspace_id, 
         "result": {
             "success" : True,
             "message" : "workspace created"
         }}
 
-@mcp.tool(description="creates a new dataset. executes R code for cmd_create_dataset(). Called prior to cmd_rpart(), cmd_glmnet() and cmd_run_inference().")
-def cmd_create_dataset(session_id, dataset_name, sql) -> Dict[str, Any]:    
-    r_env = create_REnv(session_id)
-    new_session_id = r_env.session_guid
+@mcp.tool(description=CMD_CREATE_DATASET_DESC)
+def cmd_create_dataset(workspace_id, dataset_name, sql) -> Dict[str, Any]:    
+    
+    r_env = create_REnv(workspace_id)
+    new_workspace_id = r_env.workspace_id    
     dataset_res = RCmd.run_command(
         RCmd.cmd_create_dataset,
         (
@@ -168,18 +179,16 @@ def cmd_create_dataset(session_id, dataset_name, sql) -> Dict[str, Any]:
         ),
         r_env
     )
+
     return {
-        "session_id": new_session_id,
+        "workspace_id": new_workspace_id,
         "result": dataset_res
     }
 
-@mcp.tool(description="executes R code for cmd_run_inference()."
-          "must be called after cmd_glmnet() in a chain of session_ids." \
-          "runs on an existing dataset (dataset_in)."\
-          "creates a new dataset (dataset_out) with predictions stored in the MODEL_PRED column.")
-def cmd_run_inference(session_id, dataset_in, dataset_out) -> Dict[str, Any]:
-    r_env = create_REnv(session_id)
-    new_session_id = r_env.session_guid
+@mcp.tool(description=CMD_RUN_INFERENCE_DESC)
+def cmd_run_inference(workspace_id, dataset_in, dataset_out) -> Dict[str, Any]:
+    r_env = create_REnv(workspace_id)
+    new_workspace_id = r_env.workspace_id
     dataset_res = RCmd.run_command(
         RCmd.cmd_run_inference,
         (
@@ -189,21 +198,20 @@ def cmd_run_inference(session_id, dataset_in, dataset_out) -> Dict[str, Any]:
         r_env
     )
     return {
-        "session_id": new_session_id,
+        "workspace_id": new_workspace_id,
         "result": dataset_res
     }
 
-@mcp.tool(description="executes R code for cmd_rpart(), returns session_id reflecting updated workspace."\
-          "does not cause side-effects when called, so can be called as many times as necessary in a session_id chain."\
-          "limit x_vars to a maximum of 5 variables (enforced) and max_depth to 4.")
-def cmd_rpart(session_id: str, dataset: str, x_vars: List[str], offset: str, y_var: str, max_depth : int, cp : float, ctx: Context) -> Dict[str, Any]:    
+
+@mcp.tool(description=CMD_RPART_DESC)
+def cmd_rpart(workspace_id: str, dataset: str, x_vars: List[str], offset: str, y_var: str, max_depth : int, cp : float, ctx: Context) -> Dict[str, Any]:    
     
-    r_env = create_REnv(session_id)
-    new_session_id = r_env.session_guid
+    r_env = create_REnv(workspace_id)
+    new_workspace_id = r_env.workspace_id
 
     if len(x_vars) > 5:
         return {
-            "session_id": new_session_id,
+            "workspace_id": new_workspace_id,
             "result": {
                 "success": False,
                 "message": "more than 5 x_vars passed, maximum of 5"
@@ -211,7 +219,7 @@ def cmd_rpart(session_id: str, dataset: str, x_vars: List[str], offset: str, y_v
         }
     if max_depth > 4:
         return {
-            "session_id": new_session_id,
+            "workspace_id": new_workspace_id,
             "result": {
                 "success": False,
                 "message": "max_depth > 4 passed, maximum of 4"
@@ -231,17 +239,16 @@ def cmd_rpart(session_id: str, dataset: str, x_vars: List[str], offset: str, y_v
         r_env
     )
     return {
-        "session_id": new_session_id,
+        "workspace_id": new_workspace_id,
         "result": dataset_res
     }
 
-@mcp.tool(description="executes R code for cmd_glmnet(), any subsequent calls to cmd_run_inference() will"\
-          "use this model. can only be called once in a chain of session_ids.  If it needs to be called again,"
-          "back-track to the session_id before cmd_glmnet() was called.")
-def cmd_glmnet(session_id, dataset : str, x_vars : List[str], design_matrix_vars : List[str], \
+@mcp.tool(description=CMD_GLMNET_DESC)
+def cmd_glmnet(workspace_id, dataset : str, x_vars : List[str], design_matrix_vars : List[str], \
               factor_vars_levels: dict, num_var_clip : dict, offset_var : str, y_var : str, lambda_strat : str):
-    r_env = create_REnv(session_id)
-    new_session_id = r_env.session_guid
+    
+    r_env = create_REnv(workspace_id)
+    new_workspace_id = r_env.workspace_id
     dataset_res = RCmd.run_command(
         RCmd.cmd_glmnet,
         (
@@ -257,7 +264,7 @@ def cmd_glmnet(session_id, dataset : str, x_vars : List[str], design_matrix_vars
         r_env
     )
     return {
-        "session_id": new_session_id,
+        "workspace_id": new_workspace_id,
         "result": dataset_res
     }
 

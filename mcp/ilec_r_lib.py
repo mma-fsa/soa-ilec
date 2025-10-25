@@ -20,22 +20,19 @@ from audit import AuditLogEntry
 
 logging.basicConfig(level=logging.INFO)
 
-AGENT_R_LIB = "/home/mike/workspace/soa-ilec/soa-ilec/mcp/ilec_r_lib.R"
-
 class ILECREnvironment:
 
-    def __init__(self, work_dir : str, parquet_path : str, db_pragmas : Iterable[str] = None, last_session_guid : str = None, no_cmd=False):
-    
-        self.parquet_path = parquet_path
+    def __init__(self, work_dir : str, db_pragmas : Iterable[str] = None, last_workspace_id : str = None, no_cmd=False):
+            
         self.db_pragmas = [] if db_pragmas is None else db_pragmas
         
         self.no_cmd = no_cmd
 
         # load the last session if applicable
-        if last_session_guid is not None and len(last_session_guid) > 0:
-            self.last_session_guid = last_session_guid
+        if last_workspace_id is not None and len(last_workspace_id) > 0:
+            self.last_workspace_id = last_workspace_id
         else:
-            self.last_session_guid = None
+            self.last_workspace_id = None
 
         # where to save / load sesions
         self.work_dir = Path(work_dir)
@@ -43,9 +40,9 @@ class ILECREnvironment:
             self.work_dir.mkdir(parents=True, exist_ok=True)
         
         # create a session id for this object
-        self.session_guid = str(uuid.uuid4())
+        self.workspace_id = str(uuid.uuid4())
         self.log = logging.getLogger(__name__)
-        self.this_session_path = self.work_dir / f"session_{self.session_guid}/"
+        self.this_workspace_id = self.work_dir / f"workspace_{self.workspace_id}/"
 
         # these should get set by enter()
         self.rduckdb = None
@@ -65,13 +62,13 @@ class ILECREnvironment:
         if self.run_setup:
             
             # create the session directory
-            this_session_path = self.this_session_path
-            this_session_path.mkdir(parents=True, exist_ok=False)
+            this_workspace_id = self.this_workspace_id
+            this_workspace_id.mkdir(parents=True, exist_ok=False)
 
             # create session pointer file
-            with open(this_session_path / "session_pointer.txt", "w") as fh:
-                pointer_desc = "root" if self.last_session_guid is None \
-                    else f"\"{self.last_session_guid}\"->\"{self.session_guid}\""
+            with open(this_workspace_id / "workspace_pointer.txt", "w") as fh:
+                pointer_desc = "root" if self.last_workspace_id is None \
+                    else f"\"{self.last_workspace_id}\"->\"{self.workspace_id}\""
                 fh.write(pointer_desc)                
 
             # if this is the initial session, do nothing
@@ -91,26 +88,26 @@ class ILECREnvironment:
                 self.rDBI.dbExecute(self.rconn, sql)
             
             # copy the previous working directory
-            if self.last_session_guid is not None:
-                last_session_path = self.work_dir / f"session_{self.last_session_guid}/"
-                if (last_session_path.exists() and last_session_path.is_dir()):
-                    self.log.info(f"rsync {last_session_path}->{this_session_path}")
+            if self.last_workspace_id is not None:
+                last_workspace_path = self.work_dir / f"workspace_{self.last_workspace_id}/"
+                if (last_workspace_path.exists() and last_workspace_path.is_dir()):
+                    self.log.info(f"rsync {last_workspace_path}->{this_workspace_id}")
                     
                     # first pass, symlink parquet files
-                    symlink_files = list(last_session_path.rglob("*.parquet")) + \
-                        list(last_session_path.rglob("*.rds"))
+                    symlink_files = list(last_workspace_path.rglob("*.parquet")) + \
+                        list(last_workspace_path.rglob("*.rds"))
 
                     for f in symlink_files:
-                        rel = f.relative_to(last_session_path)
-                        link_path = this_session_path / rel
+                        rel = f.relative_to(last_workspace_path)
+                        link_path = this_workspace_id / rel
                         link_path.parent.mkdir(parents=True, exist_ok=True)
                         if link_path.exists():
                             link_path.unlink()
                         os.symlink(f, link_path)
                     
-                    for f in last_session_path.rglob("*.parquet"):
-                        rel = f.relative_to(last_session_path)
-                        link_path = this_session_path / rel
+                    for f in last_workspace_path.rglob("*.parquet"):
+                        rel = f.relative_to(last_workspace_path)
+                        link_path = this_workspace_id / rel
                         link_path.parent.mkdir(parents=True, exist_ok=True)
                         if link_path.exists():
                             link_path.unlink()
@@ -122,17 +119,17 @@ class ILECREnvironment:
                         "--exclude=*.parquet",
                         "--exclude=*.rds",
                         "--exclude=*.json",
-                        "--exclude=session_pointer.txt",
-                        f"{last_session_path}/", f"{this_session_path}/"],
+                        "--exclude=workspace_pointer.txt",
+                        f"{last_workspace_path}/", f"{this_workspace_id}/"],
                         check=True)
                     
                 else:
-                    msg = f"invalid last session guid: {self.last_session_guid}"
+                    msg = f"invalid last session guid: {self.last_workspace_id}"
                     self.log.error(msg)
                     raise FileNotFoundError(msg)
             
             # set the working directory
-            r.setwd(str(this_session_path))
+            r.setwd(str(this_workspace_id))
 
 
     def __exit__(self, exc_type, exc_val, exc_tb):                
