@@ -17,6 +17,7 @@ from mcp.server.fastmcp import FastMCP, Context
 import asyncio
 import anyio
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from ilec_r_lib import ILECREnvironment as REnv, AgentRCommands as RCmd
 
@@ -28,8 +29,8 @@ anyio.to_thread.current_default_thread_limiter().total_tokens = MAX_WORKERS
 WORKER_DIR = "/home/mike/workspace/soa-ilec/soa-ilec/mcp_agent_work/"
 
 # ---- Config ----
-#PARQUET_PATH = os.environ.get("PARQUET_PATH", "/home/mike/workspace/soa-ilec/soa-ilec/data/ilec_perm_historical.parquet")
-PARQUET_PATH = os.environ.get("PARQUET_PATH", "/home/mike/workspace/soa-ilec/soa-ilec/data/ilec_2009_19_20210528.parquet")
+PARQUET_PATH = os.environ.get("PARQUET_PATH", "/home/mike/workspace/soa-ilec/soa-ilec/data/ilec_perm_historical.parquet")
+#PARQUET_PATH = os.environ.get("PARQUET_PATH", "/home/mike/workspace/soa-ilec/soa-ilec/data/ilec_2009_19_20210528.parquet")
 ROW_LIMIT    = int(os.environ.get("ROW_LIMIT", "5000"))
 
 # ---- DuckDB ----
@@ -58,15 +59,19 @@ def sql_schema(ctx: Context) -> Dict[str, str]:
 
 @mcp.tool(description="Run a single ANSI-SQL compatible query on the ILEC_DATA table. Can only select from ILEC_DATA.  Must include LIMIT (enforced).")
 def sql_run(query: str, ctx: Context) -> Dict[str, Any]:
-    print(query)    
+
+    # logging
     t0 = time.time()
-    q = (query or "").strip().rstrip(";")    
-    try:        
-        res = con.execute(q)
-        print("\n\tquery done")
-    except:
-        print("\n\tquery error")
-        raise
+    with open(Path(WORKER_DIR) / Path("sql_run.log"), "a+") as fh:
+        fh.write("\nRunning query...\n")
+        fh.write(query + "\n")         
+        q = (query or "").strip().rstrip(";")    
+        try:        
+            res = con.execute(q)
+            fh.write("\n\tquery done")
+        except:
+            fh.write("\n\tquery error")
+            raise
     
     cols = [d[0] for d in res.description]
     rows = res.fetchmany(ROW_LIMIT + 1)
@@ -201,7 +206,6 @@ def cmd_glmnet(session_id, dataset : str, x_vars : List[str], design_matrix_vars
     }
 
 # Build the MCP ASGI app
-
 mcp_app = mcp.streamable_http_app()  # exposes /mcp
 
 # ---- Minimal ASGI wrapper to add /health without touching lifespan ----

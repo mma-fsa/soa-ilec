@@ -184,7 +184,7 @@ def run_target(*args):
     finally:        
         res = res if res is not None else {"success": False, "message": "unknown error"}
         q.put(res)
-        endr()
+        endr(0)
         sys.exit(0)
 
 

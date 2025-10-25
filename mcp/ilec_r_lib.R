@@ -6,6 +6,8 @@ library(carrier)
 library(rpart)
 library(rsample)
 library(arrow)
+library(splines)
+library(splines2)
 library(tidyverse)
 
 # this should be called prior to cmd_rpart / cmd_glmnet to create data
@@ -204,7 +206,8 @@ cmd_glmnet <- function(conn, dataset, x_vars, design_matrix_vars, factor_vars_le
       var_levels = sort(unique_values)
     }
     
-    prep_glmnet_data <- prep_glmnet_data %>%
+    prep_glmnet_data <- prep_glmnet_data %>%      
+      step_mutate(!!cv := as.character(!!sym(cv))) %>%
       step_string2factor(!!sym(cv), levels = var_levels)
   }
   

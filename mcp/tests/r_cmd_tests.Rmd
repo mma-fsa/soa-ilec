@@ -30,7 +30,7 @@ system(paste0("mkdir -p ", AGENT_WS_DIR))
 
 ```{r}
 
-pq_path <- "/home/mike/workspace/soa-ilec/soa-ilec/data/ilec_2009_19_20210528.parquet"
+pq_path <- "/home/mike/workspace/soa-ilec/soa-ilec/data/ilec_perm_historical.parquet"
 
 if (!exists("conn")) {
   conn <- DBI::dbConnect(duckdb::duckdb(), paste0(AGENT_WS_DIR, "/model_data.duckdb"))
@@ -39,13 +39,7 @@ if (!exists("conn")) {
 
 tbl_ilec_data <- tbl(
   conn, 
-  sprintf("read_parquet('%s')", pq_path)) %>%
-  mutate(
-    Smoker_Status = case_when(
-      coalesce(Smoker_Status, "UNKNOWN") == "UNKNOWN" ~ "Unismoke",
-      TRUE ~ Smoker_Status
-    ),
-  )
+  sprintf("read_parquet('%s')", pq_path)) 
 
 DBI::dbExecute(
   conn,
@@ -56,7 +50,7 @@ DBI::dbExecute(
 
 
 ```{r}
-tbl_ilec_data %>% select(Smoker_Status) %>%
+tbl_ilec_data %>% colnames()
 ```
 
 
@@ -66,8 +60,8 @@ tbl_ilec_data %>% select(Smoker_Status) %>%
 source(AGENT_LIB)
 setwd(AGENT_WS_DIR)
 
-cmd_create_dataset(conn, "training_data", "select * from ILEC_DATA where Observation_Year <= 2016 and Expected_Death_QX2015VBT_by_Policy > 0")
-cmd_create_dataset(conn, "testing_data", "select * from ILEC_DATA where Observation_Year > 2016 and Expected_Death_QX2015VBT_by_Policy > 0")
+cmd_create_dataset(conn, "training_data", "select * from ILEC_DATA where observation_year <= 2016 and expdeathqx2015vbtwmi_bypol > 0")
+cmd_create_dataset(conn, "testing_data", "select * from ILEC_DATA where observation_year > 2016 and expdeathqx2015vbtwmi_bypol > 0")
 
 ```
 
@@ -78,10 +72,10 @@ cmd_create_dataset(conn, "testing_data", "select * from ILEC_DATA where Observat
 source(AGENT_LIB)
 setwd(AGENT_WS_DIR)
 
-x_vars <- c("Gender", "Insurance_Plan", "Smoker_Status", "Issue_Year")
+x_vars <- c("gender", "attained_age", "smoker_status", "issue_year")
 
 # test that it can run on a parquet
-cmd_rpart(conn, "training_data", x_vars, "Expected_Death_QX2015VBT_by_Policy", "Number_Of_Deaths", 3, 0.001)
+cmd_rpart(conn, "training_data", x_vars, "expdeathqx2015vbtwmi_bypol", "number_of_deaths", 3, 0.001)
 
 
 ```
@@ -93,9 +87,10 @@ source(AGENT_LIB)
 setwd(AGENT_WS_DIR)
 
 
-x_vars <- c("Gender", "Insurance_Plan", "Smoker_Status", "Issue_Year")
+x_vars <- c("gender", "attained_age", "smoker_status", "issue_year")
+
 # test that it can run on a parquet
-cmd_rpart(conn, "ILEC_DATA", x_vars, "Expected_Death_QX2015VBT_by_Policy", "Number_Of_Deaths", 3, 0.001)
+cmd_rpart(conn, "ILEC_DATA", x_vars, "expdeathqx2015vbtwmi_bypol", "number_of_deaths", 3, 0.001)
 
 ```
 
@@ -106,11 +101,13 @@ cmd_rpart(conn, "ILEC_DATA", x_vars, "Expected_Death_QX2015VBT_by_Policy", "Numb
 source(AGENT_LIB)
 setwd(AGENT_WS_DIR)
 
-x_vars <- c("Gender", "Insurance_Plan", "Smoker_Status", "Issue_Year")
+x_vars <- c("gender", "attained_age", "smoker_status", "issue_year", "face_amount_band_int")
+
 design_matrix_vars <- c(
-  "Gender:Insurance_Plan",
-  "Issue_Year",
-  "Gender*Smoker_Status"
+  "gender:smoker_status",
+  "gender*attained_age",
+  "issue_year*attained_age",
+  "face_amount_band_int"
 )
 
 cmd_glmnet(
@@ -119,14 +116,14 @@ cmd_glmnet(
   x_vars,
   design_matrix_vars,
   list(
-    "Gender" = "Male",
-    "Smoker_Status" = "NonSmoker"
+    "gender" = "male",
+    "smoker_status" = "NONSMOKER"
   ),
   list(
-    "Issue_Year" = c(1980, 2022)
+    "issue_year" = c(1980, 2022)
   ),
-  "Expected_Death_QX2015VBT_by_Policy",
-  "Number_Of_Deaths",
+  "expdeathqx2015vbtwmi_bypol",
+  "number_of_deaths",
   "1se"
 )
 
