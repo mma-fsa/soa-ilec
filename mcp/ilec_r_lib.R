@@ -23,17 +23,11 @@ cmd_create_dataset <- function(conn, dataset_name, sql) {
   if (file.exists(dataset_output_file)) {
     stop(sprintf("Cannot create a dataset: '%s', already exists"))
   }
-  
-  # view definition
-  sql_create_view <- sprintf(
-    "create or replace view vw_dataset as (%s)", sql
-  )
-  
-  # create the modeling view
-  DBI::dbExecute(conn, sql_create_view)
+    
   # write the dataset
   sql_create_data <- sprintf(
-    "copy(select * from vw_dataset) to '%s' (FORMAT PARQUET, ROW_GROUP_SIZE 100000)",
+    "copy(%s) to '%s' (FORMAT PARQUET, ROW_GROUP_SIZE 100000)",
+    sql,
     dataset_output_file
   )
   DBI::dbExecute(conn, sql_create_data)

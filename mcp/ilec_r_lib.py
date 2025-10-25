@@ -17,7 +17,7 @@ import os
 import sys
 
 from audit import AuditLogEntry
-from env_vars import AGENT_R_LIB
+from env_vars import AGENT_R_LIB, DEFAULT_DDB_PATH
 
 logging.basicConfig(level=logging.INFO)
 
@@ -82,7 +82,7 @@ class ILECREnvironment:
             
             # setup database connection
             self.rconn = self.rDBI.dbConnect(
-                self.rduckdb.duckdb(), ":memory:")
+                self.rduckdb.duckdb(dbdir=str(DEFAULT_DDB_PATH), read_only=True))
 
             # run pragmas
             for sql in self.db_pragmas:

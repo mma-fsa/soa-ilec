@@ -2,7 +2,7 @@ import threading, sqlite3, duckdb, decimal, datetime
 
 from pathlib import Path
 from env_vars import DEFAULT_SESSION_SETTINGS, DEFAULT_DDB_WORKERS,\
-    DEFAULT_DDB_MEM, DEFAULT_DDB_INIT_SQL, DEFAULT_DDB_PATH, DEFAULT_DATA_DIR,\
+    DEFAULT_DDB_MEM, DEFAULT_DDB_PATH, DEFAULT_DATA_DIR,\
     DEFAULT_SESS_DB_INIT_SQL
 from collections import defaultdict
 
@@ -18,8 +18,7 @@ class Database:
 
     DDB_PRAGMAS = [
         "PRAGMA disable_progress_bar",
-        f"PRAGMA memory_limit='{DEFAULT_DDB_MEM}'",
-        DEFAULT_DDB_INIT_SQL
+        f"PRAGMA memory_limit='{DEFAULT_DDB_MEM}'"
     ]
 
     @staticmethod
@@ -30,7 +29,7 @@ class Database:
         return DatabaseConnectionWrapper(conn)        
 
     @staticmethod
-    def get_duckdb_conn(read_only = False):
+    def get_duckdb_conn(read_only = True):
 
         duckdb_conn = duckdb.connect(
             database = DEFAULT_DDB_PATH,
