@@ -19,34 +19,9 @@ from ilec_r_lib import ILECREnvironment as REnv, AgentRCommands as RCmd
 from app_shared import Database, AppSession
 from env_vars import DEFAULT_DDB_ROW_LIMIT
 
-# ---- MCP Tool Descriptions ----
-SQL_SCHEMA_DESC = "Returns database schema information for the table_name argument."\
-    "Useful for sql_run() and cmd_create_dataset()."
-
-SQL_RUN_DESC = "Provide a short description of your rationale for this tool call via the desc argument."\
-    "Use the query argument to run a single duckdb compatible select statement."\
-    f"Do not use CTEs. Must include LIMIT with no greater than {DEFAULT_DDB_ROW_LIMIT} records (enforced)."
-
-CMD_INIT_DESC = """Initializes an immutable workspace for calls to cmd_* methods, returns a workspace_id."""\
-    """each call to a cmd_* method produces a new workspace_id to be used in subsequent calls if they depend on some """\
-    """change in state occuring due to that method call, like fitting a model, creating a dataset, or running inference."""\
-    """This allows back-tracking via workspace_ids to a previous state without side-effects from subsequent method calls."""
-
-CMD_CREATE_DATASET_DESC = "creates a new dataset. executes R code for cmd_create_dataset()."\
-    "Called prior to cmd_rpart(), cmd_glmnet() and cmd_run_inference()."
-
-CMD_RUN_INFERENCE_DESC = "executes R code for cmd_run_inference()."\
-    "must be called after cmd_glmnet() in a chain of workspace_ids." \
-    "runs on an existing dataset (dataset_in)."\
-    "creates a new dataset (dataset_out) with predictions stored in the MODEL_PRED column."
-
-CMD_RPART_DESC = "executes R code for cmd_rpart(), returns workspace_id reflecting updated workspace."\
-    "does not cause side-effects when called, so can be called as many times as necessary in a workspace_id chain."\
-    "limit x_vars to a maximum of 5 variables (enforced) and max_depth to 4."
-
-CMD_GLMNET_DESC = "executes R code for cmd_glmnet(), any subsequent calls to cmd_run_inference() will"\
-    "use this model. can only be called once in a chain of workspace_ids. If it needs to be called again,"\
-    "back-track to the workspace_id before cmd_glmnet() was called."
+# get tool descriptions
+from prompt import SQL_SCHEMA_DESC, SQL_RUN_DESC, CMD_INIT_DESC, CMD_CREATE_DATASET_DESC,\
+    CMD_RUN_INFERENCE_DESC, CMD_RPART_DESC, CMD_GLMNET_DESC
 
 # ---- Default R environment setup ----
 def create_REnv(workspace_id, no_cmd=False):
@@ -91,28 +66,28 @@ def sql_schema(table_name : str, ctx: Context) -> Dict[str, Any]:
     return res
 
 @mcp.tool(description=SQL_RUN_DESC)
-def sql_run(desc : str, query: str, ctx: Context) -> Dict[str, Any]:
+def sql_run(desc : str, sql: str, ctx: Context) -> Dict[str, Any]:
 
     DUCKDB_SELECT_STMT = re.compile(r'(?is)^\s*select\b[^;]*\blimit\s+\d+\s*(?:offset\s+\d+\s*)?;?\s*$')
 
-    if not DUCKDB_SELECT_STMT.match(query):
+    if not DUCKDB_SELECT_STMT.match(sql):
         return {
             "success" : False,
-            "message" : "Not a valid duckdb select query w/ a limit clause."
+            "message" : "'query' not a valid duckdb select sql w/ a limit clause."
         }
     
     # helper func for running sql query
-    def run_query(ddb_con, desc, query):
+    def run_query(ddb_con, desc, sql):
         t0 = time.time()
-        clean_query = query.strip().rstrip(";")
+        clean_sql = sql.strip().rstrip(";")
         try:
-            query_res = ddb_con.execute(clean_query)
+            query_res = ddb_con.execute(clean_sql)
             cols = [d[0] for d in query_res.description]
             rows = query_res.fetchmany(DEFAULT_DDB_ROW_LIMIT + 1)
             res = {
                 "success" : True,
                 "desc" : desc,
-                "query" : clean_query,
+                "sql" : sql,
                 "results" : {
                     "columns": cols,
                     "rows": rows[:DEFAULT_DDB_ROW_LIMIT],
@@ -124,7 +99,7 @@ def sql_run(desc : str, query: str, ctx: Context) -> Dict[str, Any]:
             res = {
                 "success" : False,
                 "desc" : desc,
-                "query" : clean_query,
+                "sql" : sql,
                 "message" : str(e)
             }
         return res        
@@ -143,11 +118,11 @@ def sql_run(desc : str, query: str, ctx: Context) -> Dict[str, Any]:
         query_id = uuid.uuid4()
         query_log_file = sql_log_dir / Path(f"query_{query_id}.json")
         with open(query_log_file.resolve(), "w") as log_fh:
-            query_res = run_query(ddb_con, desc, query)
+            query_res = run_query(ddb_con, desc, sql)
             log_entry = {
                 "success" : query_res["success"],                
                 "desc" : desc,
-                "query" : query
+                "sql" : sql
             }            
             json.dump(log_entry, log_fh)
         
@@ -168,7 +143,16 @@ def cmd_init() -> Dict[str, Any]:
 
 @mcp.tool(description=CMD_CREATE_DATASET_DESC)
 def cmd_create_dataset(workspace_id, dataset_name, sql) -> Dict[str, Any]:    
-    
+
+    # can select without a limit   
+    DUCKDB_SELECT_STMT = re.compile(r'(?is)^\s*select\b.*;?\s*$')
+
+    if not DUCKDB_SELECT_STMT.match(sql):
+        return {
+            "success" : False,
+            "message" : "sql must be a valid duckdb select statement."
+        }    
+
     r_env = create_REnv(workspace_id)
     new_workspace_id = r_env.workspace_id    
     dataset_res = RCmd.run_command(

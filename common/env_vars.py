@@ -20,6 +20,9 @@ DEFAULT_DDB_ROW_LIMIT = 1000
 
 AGENT_R_LIB = "/home/mike/workspace/soa-ilec/soa-ilec/mcp/ilec_r_lib.R"
 
+DEFAULT_MCP_URL = "http://127.0.0.1:9090/mcp/"
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or Path("/home/mike/workspace/soa-ilec/soa-ilec/.openai_key").read_text().strip()
+
 # ---- Default Session Settings, stuff the client can change ----
 DEFAULT_SESSION_SETTINGS = {
     "MCP_WORK_DIR" : "/home/mike/workspace/soa-ilec/soa-ilec/mcp_agent_work/",    

@@ -17,6 +17,7 @@ import os
 import sys
 
 from audit import AuditLogEntry
+from env_vars import AGENT_R_LIB
 
 logging.basicConfig(level=logging.INFO)
 
