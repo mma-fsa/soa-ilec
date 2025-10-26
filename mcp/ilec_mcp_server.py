@@ -104,7 +104,7 @@ def sql_run(desc : str, sql: str, ctx: Context) -> Dict[str, Any]:
             }
         return res        
 
-    # get session data   
+    # get session data
     with Database.get_session_conn() as sess_con:
         session_data = AppSession(sess_con)._get_data()
 

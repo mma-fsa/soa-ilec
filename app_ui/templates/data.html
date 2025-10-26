@@ -2,190 +2,254 @@
 {% block title %}Query · ILEC{% endblock %}
 
 {% block head %}
-  <link rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/@codemirror/theme-one-dark@6.2.0/theme-one-dark.css" />
-  <style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codemirror/theme-one-dark@6.2.0/theme-one-dark.css" />
+<style>
+  .split-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  @media (min-width: 992px) {
     .split-wrap {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
+      flex-direction: row;
     }
-    @media (min-width: 992px) {
-      .split-wrap { flex-direction: row; }
-      .editor-pane { flex: 0 0 40%; max-width: 40%; }
-      .results-pane { flex: 0 0 60%; max-width: 60%; }
+
+    .editor-pane {
+      flex: 0 0 40%;
+      max-width: 40%;
     }
-    .card-fill { height: 72vh; display: flex; flex-direction: column; }
-    .cm-editor {
-      border: 1px solid #ced4da;
-      border-radius: .375rem;
-      font-size: .75rem;
-      height: 100%;
+
+    .results-pane {
+      flex: 0 0 60%;
+      max-width: 60%;
     }
-    .editor-shell { flex: 1; min-height: 300px; }
-    .results-body { overflow: auto; flex: 1; min-height: 300px; }
-    .results-meta {
-      display: flex;
-      gap: .5rem;
-      flex-wrap: wrap;
-      align-items: center;
-      margin-bottom: .75rem;
-    }
-    .mono {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-    }
-  </style>
+  }
+
+  .card-fill {
+    height: 72vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .cm-editor {
+    border: 1px solid #ced4da;
+    border-radius: .375rem;
+    font-size: .75rem;
+    height: auto;
+  }
+
+  .editor-shell {
+    flex: 1;
+    height: auto;
+  }
+
+  .results-body {    
+    flex: 1;
+    min-height: 300px;
+  }
+
+  .results-meta {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: .75rem;
+  }
+
+  .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  }
+</style>
 {% endblock %}
 
 {% block content %}
-  <div class="split-wrap">
-    <div class="editor-pane">
-      <div class="card shadow-sm card-fill">
-        <div class="card-body d-flex flex-column">
-          <h1 class="h5 mb-3"> <code>ILEC_DATA</code></h1>
-          <textarea id="query" hidden>SELECT * FROM ILEC_DATA LIMIT 5;</textarea>
-          <div class="editor-shell"><div id="editor"></div></div>
+<div class="split-wrap">
+  <div class="editor-pane">
+    <div class="card shadow-sm card-fill">
+      <div class="card-body d-flex flex-column">
+        <h1 class="h5 mb-3">
+          <div class="small" style="float: right">
+            <label class="form-label small">Load View:</label>
+            <form method="post" style="display: contents;">
+              <select id="load_vw" name="load_vw" style="max-width: 150px;" onchange="this.form.requestSubmit()">
+                <option value="" selected>...</option>
+                {% for v in view_data["view_names"] %}
+                  <option value="{{ v }}">{{ v }}</option>                  
+                {% endfor %}
+              </select>
+            </form>            
+          </div>
+          <code>Query Editor</code>
+        </h1>
+        <form id="query_params" name="query_params" method="post" style="display: contents;">
+          <textarea id="query" name="query" hidden>{{ view_data["query"] }}</textarea>
+          <input type="hidden" name="export_results" value="">
+          <div class="editor-shell">
+            <div id="editor"></div>
+          </div>
           <div class="d-flex align-items-center gap-2 mt-3">
-            <button id="run-btn" class="btn btn-primary">Run Query</button>
-            <button id="format-btn" class="btn btn-outline-secondary">Format</button>
-            <span class="text-muted ms-auto small">Only <code>SELECT ... FROM ILEC_DATA</code> is allowed.</span>
+            <button id="run-btn" name="run_query" class="btn btn-primary">Run Query</button>
+            <fieldset class="text-muted ms-auto small">
+              <label>Read only:</label>
+              <input name="read_only" type="checkbox" checked>
+            </fieldset>
+            <span id="hint_readonly_checked" class="text-muted ms-auto small">
+              Only <code>SELECT ... FROM </code> is allowed.
+            </span>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="results-pane">
-      <div class="card shadow-sm card-fill">
-        <div class="card-body d-flex flex-column">
-          <div class="results-meta">
-            <h2 class="h6 m-0">Results</h2>
-            <span id="elapsed" class="badge bg-secondary d-none"></span>
-            <span id="truncated" class="badge bg-warning text-dark d-none">Truncated</span>
-          </div>
-          <div id="results" class="results-body">
-            <div class="text-muted">Run a query to see results here.</div>
-          </div>
-          <details class="mt-2">
-            <summary class="small text-muted">Raw response</summary>
-            <pre id="raw" class="mono small mb-0"></pre>
-          </details>
-        </div>
+        </form>
       </div>
     </div>
   </div>
+
+  <div class="results-pane">
+    <div class="card shadow-sm card-fill">
+      <div class="card-body d-flex flex-column">
+        <div class="results-meta">
+          <h2 class="h6 m-0">Results</h2>
+          {% set query_success = ((view_data.get('query_success') == True) or False) %}
+          <span id="elapsed" class="badge bg-success {{ '' if query_success else 'd-none' }}">SUCCESS</span>
+          {% set query_error = ((view_data.get('query_success') == False) or False) %}
+          <span id="error" class="badge bg-danger {{ '' if query_error else 'd-none' }}">Error</span>
+          {% set truncated = (view_data.get('query_results') or {}).get('truncated', false) %}
+          {% set row_limit = (view_data.get('query_limit') or 0)  %}
+          <span id="truncated" class="badge bg-warning text-dark {{ 'd-none' if not truncated else '' }}">Truncated @ {{ row_limit }} rows</span>
+        </div>
+        <div id="results" class="results-body">
+          {% if "query_results" in view_data.keys() %}
+          <div class="table-responsive" style="max-height: 55vh; overflow-y: auto;">
+            <table class="table table-sm table-striped mb-0" style="font-size: x-small;">
+              <thead>
+                <tr>
+                  {% for col in view_data["query_results"].cols %}
+                  <th>{{ col }}</th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in view_data["query_results"].rows %}
+                <tr>
+                  {% for cell in row %}
+                  <td>{{ cell }}</td>
+                  {% endfor %}
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="text-muted"> {{ view_data["query_message"] }} </div>
+          {% endif %}
+        </div>
+        <details class="mt-2">
+          <summary class="small text-muted">Export</summary>
+          <a href="javascript:run_export('excel')">Excel</a>
+          <a href="javascript:run_export('csv')">CSV</a>
+          <a href="javascript:run_export('parquet')">Parquet</a>
+        </details>
+      </div>
+    </div>
+  </div>
+</div>
+
+<iframe name="download_iframe" class="d-none" style="display:none;"></iframe>
+
 {% endblock %}
 
 {% block scripts %}
-  <script type="module">
-    // ✅ Unified bundle from esm.sh – deduplicates all @codemirror deps
-    import {
-      EditorState,
-      EditorView,
-      basicSetup
-    } from "https://esm.sh/@codemirror/basic-setup@0.20.0?bundle";
+<script>  
+  function run_export(export_type) {
 
-    const textarea = document.getElementById("query");
-    const editorParent = document.getElementById("editor");
+      const form = document.getElementById("query_params");
+      const hiddenInput = form.querySelector('input[name="export_results"]');
+      const textarea = document.getElementById("query");
 
-    // Initialize the editor
-    const state = EditorState.create({
-      doc: textarea.value,
-      extensions: [basicSetup],
-    });
-    const view = new EditorView({ state, parent: editorParent });
+      // sync CodeMirror -> textarea if you exposed it as window.view
+      if (window.view) textarea.value = window.view.state.doc.toString();
 
-    // --- UI logic ---
-    const runBtn = document.getElementById("run-btn");
-    const formatBtn = document.getElementById("format-btn");
-    const resultsEl = document.getElementById("results");
-    const rawEl = document.getElementById("raw");
-    const elapsedEl = document.getElementById("elapsed");
-    const truncEl = document.getElementById("truncated");
+      // set export flag
+      hiddenInput.value = export_type;
 
-    function setLoading(loading) {
-      runBtn.disabled = loading;
-      runBtn.textContent = loading ? "Running..." : "Run Query";
-    }
-
-    function escapeHtml(s) {
-      return s.replace(/[&<>"']/g, ch =>
-        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[ch]));
-    }
-
-    function renderTable(columns, rows) {
-      if (!columns?.length) {
-        resultsEl.innerHTML = '<div class="alert alert-info">No columns/rows returned.</div>';
-        return;
+      // temporarily aim the POST at the hidden iframe
+      const prevTarget = form.target;
+    
+      try {      
+        form.target = "download_iframe";      
+        form.requestSubmit();
+      } 
+      finally {
+        form.target = prevTarget || "";
+        hiddenInput.value = "";
       }
-      const thead = `<thead class="table-light"><tr>${columns.map(c => `<th scope="col">${escapeHtml(c)}</th>`).join("")}</tr></thead>`;
-      const tbody = `<tbody>${rows.map(r => `<tr>${r.map(cell => `<td>${escapeHtml(String(cell))}</td>`).join("")}</tr>`).join("")}</tbody>`;
-      resultsEl.innerHTML = `<div class="table-responsive">
-          <table class="table table-sm table-striped align-middle">${thead}${tbody}</table>
-        </div>`;
+      
+  }
+</script>
+<script type="module">
+  import {
+    EditorState,
+    EditorView,
+    basicSetup
+  } from "https://esm.sh/@codemirror/basic-setup@0.20.0?bundle";
+
+  const textarea = document.getElementById("query");
+  const editorParent = document.getElementById("editor");
+
+  const cappedHeight = EditorView.theme({
+    "&": { height: "auto" },                 // let wrapper size naturally
+    ".cm-scroller": {
+      maxHeight: "55vh",                     // <-- set your cap here
+      overflow: "auto"                       // scroll when content exceeds
     }
+  });
 
-    function setMeta({ elapsed_s, truncated }) {
-      if (typeof elapsed_s === "number") {
-        elapsedEl.textContent = `Elapsed ${elapsed_s.toFixed(3)}s`;
-        elapsedEl.classList.remove("d-none");
-      } else {
-        elapsedEl.classList.add("d-none");
-      }
-      if (truncated) truncEl.classList.remove("d-none");
-      else truncEl.classList.add("d-none");
-    }
+  const tabHandler = EditorView.domEventHandlers({
+    keydown(event, view) {
+      if (event.key === "Tab" && !event.ctrlKey && !event.metaKey) {
+        event.preventDefault();
+        // choose one:
+        const indent = "\t";          // literal tab
+        // const indent = "  ";       // 2 spaces
+        // const indent = "    ";     // 4 spaces
 
-    async function runQuery() {
-      setLoading(true);
-      try {
-        const sqlText = view.state.doc.toString();
-        const res = await fetch("/api/run_query", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: sqlText }),
-        });
-        const payload = await res.json();
-        rawEl.textContent = JSON.stringify(payload, null, 2);
-
-        if (payload.error) {
-          resultsEl.innerHTML = `
-            <div class="alert alert-danger" role="alert">
-              <strong>Error:</strong> ${escapeHtml(payload.error.message || String(payload.error))}
-            </div>`;
-          setMeta({});
-          return;
+        if (event.shiftKey) {
+          // simple outdent: remove leading indent from each selected line if present
+          const { state } = view;
+          const tr = state.changeByRange(range => {
+            let fromLine = state.doc.lineAt(range.from);
+            let toLine   = state.doc.lineAt(range.to);
+            let changes = [];
+            for (let line = fromLine.number; line <= toLine.number; line++) {
+              const { from } = state.doc.line(line);
+              const text = state.doc.sliceString(from, from + indent.length);
+              if (text === indent) changes.push({ from, to: from + indent.length, insert: "" });
+            }
+            return { changes, range };
+          });
+          if (tr.changes.empty) return true;
+          view.dispatch(tr);
+        } else {
+          // insert indent (handles selections too)
+          view.dispatch(view.state.replaceSelection(indent));
         }
-
-        const result = payload.result || {};
-        renderTable(result.columns || [], result.rows || []);
-        setMeta({ elapsed_s: result.elapsed_s, truncated: result.truncated });
-      } catch (e) {
-        resultsEl.innerHTML = `
-          <div class="alert alert-danger" role="alert">
-            <strong>Network error:</strong> ${escapeHtml(String(e))}
-          </div>`;
-        setMeta({});
-      } finally {
-        setLoading(false);
+        return true;
       }
     }
+  });
 
-    function formatSql() {
-      const txt = view.state.doc.toString().trim();
-      const pretty = txt.endsWith(";") ? txt : txt + ";";
-      view.dispatch({
-        changes: { from: 0, to: view.state.doc.length, insert: pretty + "\n" },
-      });
-    }
+  // Initialize the editor
+  const state = EditorState.create({
+    doc: textarea.value,
+    extensions: [basicSetup, cappedHeight, tabHandler],
+  });
+  const view = new EditorView({ state, parent: editorParent });
+  window.view = view;
 
-    runBtn.addEventListener("click", runQuery);
-    formatBtn.addEventListener("click", formatSql);
+  // write the query to the form variable before POST
+  const form = document.forms.query_params;
+  form.addEventListener("submit", () => {
+    textarea.value = view.state.doc.toString();
+  });
 
-    editorParent.addEventListener("keydown", e => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-        e.preventDefault();
-        runQuery();
-      }
-    });
-  </script>
+</script>
 {% endblock %}

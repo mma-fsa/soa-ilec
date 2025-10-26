@@ -10,6 +10,10 @@ DEFAULT_DDB_MEM = "16GB"
 DEFAULT_DATA_DIR = Path("/home/mike/workspace/soa-ilec/soa-ilec/data/")
 DEFAULT_DDB_PATH = DEFAULT_DATA_DIR / Path("ilec_data.duckdb")
 DEFAULT_ILEC_PQ_LOCATION = DEFAULT_DATA_DIR / Path("ilec_2009_19_20210528.parquet")
+DEFAULT_DATA_EXPORT_DIR = DEFAULT_DATA_DIR / Path("exports")
+
+if not DEFAULT_DATA_EXPORT_DIR.exists():
+    DEFAULT_DATA_EXPORT_DIR.mkdir(parents=True, exist_ok=True)
 
 DEFAULT_SESS_DB_INIT_SQL = """CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)"""
 

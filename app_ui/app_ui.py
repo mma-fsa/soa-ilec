@@ -1,12 +1,18 @@
 import os
 from starlette.applications import Starlette
-from starlette.responses import HTMLResponse, JSONResponse
+from starlette.responses import HTMLResponse, FileResponse, JSONResponse
 from starlette.requests import Request
 from starlette.routing import Route, Mount
 from starlette.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
+import sqlglot
+from sqlglot import expressions as exp
 import httpx
 import uvicorn
+
+from app_shared import Database
+from vwmodel import DataViewModel
+from pathlib import Path
 
 # --- Config ---
 MCP_URL = os.environ.get("MCP_URL", "http://127.0.0.1:9090/mcp")
@@ -19,29 +25,94 @@ def render(template_name, **ctx):
     return HTMLResponse(template.render(**ctx))
 
 # --- Routes ---
-async def homepage(request: Request):
-    return render("index.html", title="ILEC Agent Interface")
-
 async def data(request: Request):
-    return render("data.html", title="ILEC Agent Interface")
+    
+    form_data = await request.form()
 
-async def run_query(request: Request):
-    data = await request.form()
-    query = data.get("query", "")
-    async with httpx.AsyncClient() as client:
-        res = await client.post(MCP_URL, json={
-            "method": "sql_run",
-            "params": {"query": query},
-            "id": 1,
-            "jsonrpc": "2.0"
-        })
-    mcp_result = res.json()
-    return render("result.html", title="Results", result=mcp_result)
+    # check if this is a read-only view
+    if request.method == "POST" and "read_only" in form_data.keys():
+        read_only = form_data["read_only"] == "on"
+    else:
+        read_only = False
+
+    # populate the view data
+    with Database.get_duckdb_conn(read_only = read_only) as conn:
+    
+        dvm = DataViewModel(conn)
+
+        view_names = list(map(lambda x: x[0], dvm.get_views()["rows"]))
+        
+        # initialize data to be rendered
+        query_results = {}
+        view_data = {            
+            "view_names" : view_names,
+            "query_message" : "Run a query to see results here.",
+            "query" : "SELECT * FROM ILEC_DATA LIMIT 50;"
+        }
+                        
+        if request.method == "POST":     
+            if "run_query" in form_data.keys():
+                query = form_data["query"]
+                view_data["query"] = query
+                query_limit = 500
+                try:                    
+                    query_res = dvm.run_query(query, limit=query_limit)
+                    view_data["query_results"] = query_res
+                    view_data["query_limit"] = query_limit
+                    view_data["query_success"] = True
+                except Exception as e:
+                    view_data["query_success"] = False
+                    view_data["query_message"] = str(e)
+
+            elif "load_vw" in form_data.keys():
+                try:
+                    raw_sql = dvm.get_view_definition(form_data["load_vw"])["rows"][0][0]                    
+                except Exception as e:
+                    view_data["query_success"] = False
+                    view_data["query_message"] = str(e)
+
+                query = sqlglot.transpile(raw_sql, read="duckdb", write="duckdb", pretty=True)[0]
+            
+            elif "export_results" in form_data.keys():
+                
+                export_type = form_data["export_results"]
+                query = form_data["query"]                
+             
+                if export_type == "excel":
+                    file_path = Path(dvm.export_xlsx(query)[1])
+                    content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                elif export_type == "csv":
+                    file_path = Path(dvm.export_csv(query))
+                    content_type = "text/csv"
+                elif export_type == "parquet":
+                    file_path = Path(dvm.export_parquet(query))
+                    content_type = "application/octet-stream"
+                else:
+                    raise Exception(f"Invalid export_type: {export_type}")
+
+                # --- Return file for download ---            
+                return FileResponse(
+                    path=file_path,
+                    media_type=content_type,
+                    filename=file_path.name,
+                )
+        
+    return render(
+        "data.html", 
+        view_data = view_data,
+        query_results = query_results
+    )
+
+async def agent(request: Request):
+    return render("agent.html", title="ILEC Agent Interface")
+
+async def audit(request: Request):
+    return render("audit.html", title="ILEC Agent Interface")
 
 routes = [
-    Route("/", data, methods=["GET"]),
-    Route("/query", data, methods=["GET"]),
-    Route("/run_query", run_query, methods=["POST"]),
+    Route("/", data, methods=["GET", "POST"]),
+    Route("/data", data, methods=["GET", "POST"]),
+    #Route("/run_query", run_query, methods=["POST"]),
     Mount("/static", app=StaticFiles(directory="static"), name="static"),
 ]
 
