@@ -8,6 +8,8 @@ DEFAULT_DDB_WORKERS = os.cpu_count() or 4
 DEFAULT_DDB_MEM = "16GB"
 
 DEFAULT_DATA_DIR = Path("/home/mike/workspace/soa-ilec/soa-ilec/data/")
+DEFAULT_AGENT_WORK_DIR = DEFAULT_DATA_DIR / Path("workspaces/")
+
 DEFAULT_DDB_PATH = DEFAULT_DATA_DIR / Path("ilec_data.duckdb")
 DEFAULT_ILEC_PQ_LOCATION = DEFAULT_DATA_DIR / Path("ilec_2009_19_20210528.parquet")
 DEFAULT_DATA_EXPORT_DIR = DEFAULT_DATA_DIR / Path("exports")
@@ -29,7 +31,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or Path("/home/mike/workspace/soa-i
 
 # ---- Default Session Settings, stuff the client can change ----
 DEFAULT_SESSION_SETTINGS = {
-    "MCP_WORK_DIR" : "/home/mike/workspace/soa-ilec/soa-ilec/mcp_agent_work/",    
+    "MCP_WORK_DIR" : DEFAULT_AGENT_WORK_DIR / Path("/test_agent/"),
     "MODEL_DB": DEFAULT_DDB_PATH,
     "MODEL_DATA_VW" : "ILEC_DATA"
 }

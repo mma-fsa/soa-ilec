@@ -5,11 +5,9 @@ async def call_mcp_tool():
     async with Client("http://localhost:9090/mcp") as client:
         try:
             # Call the 'add' tool with specific parameters
-            tool_name = "cmd_run_inference"
+            tool_name = "cmd_finalize"
             params = {
-                "workspace_id" : "4ceddba1-80fe-4334-b8bc-0ee359dc6948",
-                "dataset_in": "ul_train_data", 
-                "dataset_out": "ul_train_data_model_preds"
+                "workspace_id" : "02c84d78-3521-4b17-9995-4d05d10fd860"
             }
             
             print(f"Calling tool '{tool_name}' with parameters: {params}")

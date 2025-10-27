@@ -1,4 +1,5 @@
 import json
+import os
 import re
 from pathlib import Path
 from collections import defaultdict, deque
@@ -12,12 +13,46 @@ class AuditLogReader:
     def __init__(self, work_dir):
         self.work_dir = Path(str(work_dir))
 
-    def traverse_audit_log(self, final_workspace_id):
+    def traverse_model_audit_log(self, final_workspace_id):
         
-        final_path = self._traverse_final(final_workspace_id)
-        full_tree = self._traverse_full(final_path["workspace_id"])
+        final_path = self._traverse_branch(final_workspace_id)
+        full_tree = self._traverse_tree(final_path["workspace_id"])
 
         return (final_path, full_tree)
+    
+    def traverse_sql_audit_log(self):
+        
+        base_dir = self.work_dir / "sql_run"
+        log_files = []
+    
+        with os.scandir(base_dir) as it:
+            for de in it:
+                if not de.is_file():
+                    continue
+                name = de.name
+                if not name.endswith(".json"):
+                    continue
+                try:
+                    st = de.stat()
+                except FileNotFoundError:                    
+                    continue
+                # Use the creation time for ordering
+                t_ns = getattr(st, "st_ctime_ns", int(st.st_ctime))
+                log_files.append((t_ns, de.path))
+    
+        # show queries in order of execution
+        log_files.sort(key=lambda x: x[0])
+
+        # parse query json
+        sql_log_entries = []
+        for _, p in log_files:
+            log_file_path = Path(p)
+            with open(str(log_file_path.resolve()), "r") as fh:
+                sql_log_entries.append(
+                    json.load(fh)
+                )
+
+        return sql_log_entries
 
     def _traverse_tree(self, root_workspace_id):
 
@@ -60,7 +95,7 @@ class AuditLogReader:
             curr_sess_id = nodes_todo.popleft()
             curr_traversal = node_data[curr_sess_id]
             
-            for child_sess_id in adj_mat[curr_sess_id]:                
+            for child_sess_id in adj_mat[curr_sess_id]:     
                 nodes_todo.append(child_sess_id)
                 child_data = self.__init_entry(
                     workspace_id=child_sess_id,
@@ -124,8 +159,12 @@ class AuditLogReader:
 
     def _get_node_log(self, workspace_id):
         log_entry_file = self.work_dir / Path(f"workspace_{workspace_id}") / Path("tool_call.json")
-        with open(log_entry_file, "r") as fh:
-            return json.load(fh)
+        tool_call = None
+        if log_entry_file.exists():
+            with open(log_entry_file, "r") as fh:
+                tool_call = json.load(fh)        
+        
+        return tool_call
 
 class AuditLogEntry:
 

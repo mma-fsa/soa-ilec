@@ -86,7 +86,7 @@ class AppSession:
             VALUES (?, ?)
             ON CONFLICT(key) DO UPDATE SET
                 value = excluded.value
-        """, (key, value))
+        """, (key, str(value)))
         self.conn.commit()
 
     def _del_data(self, key):
@@ -104,7 +104,7 @@ class AppSession:
             raise KeyError(f"{key!r} not found")
 
     def __setitem__(self, key, value):
-        self._set_data(self, key, value)
+        self._set_data(key, value)
     
     def __delitem__(self, key):
         self._del_data(key)

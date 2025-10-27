@@ -28,8 +28,7 @@ from audit import AuditLogReader
 
 # ---- Default R environment setup ----
 def create_REnv(workspace_id, no_cmd=False):
-    
-        
+            
     with Database.get_session_conn() as con:
         session = AppSession(con)
         workspace_dir = Path(session["MCP_WORK_DIR"])
@@ -268,7 +267,7 @@ def cmd_glmnet(workspace_id, dataset : str, x_vars : List[str], design_matrix_va
 
 
 @mcp.tool(description=CMD_FINALIZE_DESC)
-def cmd_finalize(workspace_id):
+def cmd_finalize(workspace_id) -> Dict[str , Any]:
     
     final_workspace_id = None
     renv = create_REnv(workspace_id, no_cmd=True)
@@ -276,14 +275,24 @@ def cmd_finalize(workspace_id):
         final_workspace_id = renv.workspace_id
 
     with Database.get_session_conn() as con:
+        
         session = AppSession(con)
         workspace_dir = Path(session["MCP_WORK_DIR"])
     
         audit_reader = AuditLogReader(workspace_dir)
 
-        final_path, full_tree = audit_reader.traverse_audit_log(workspace_id)
+        sql_log = audit_reader.traverse_sql_audit_log()
+        final_model_log, all_model_logs = audit_reader.traverse_model_audit_log(workspace_id)
 
-        
+        finalize_data = {
+            "workspace_id": final_workspace_id,
+            "sql_log" : sql_log,
+            "final_model_log" : final_model_log,
+            "all_model_logs" : all_model_logs
+        }
+
+        with open(workspace_dir / Path("final.json"), "w") as fh:
+            json.dump(finalize_data, fh)
     
     return {
         "workspace_id": final_workspace_id, 
@@ -291,7 +300,6 @@ def cmd_finalize(workspace_id):
             "success" : True,
             "message" : "workspace finalized, no further calls to cmd_*() allowed, your modeling work is done."
         }}
-
 
 
 # Build the MCP ASGI app
