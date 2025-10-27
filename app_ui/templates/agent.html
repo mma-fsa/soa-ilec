@@ -32,13 +32,6 @@
     flex-direction: column;
   }
 
-  .cm-editor {
-    border: 1px solid #ced4da;
-    border-radius: .375rem;
-    font-size: .75rem;
-    height: 100%;
-  }
-
   .editor-shell {
     flex: 1;
     min-height: 300px;
@@ -68,30 +61,66 @@
 <div class="split-wrap">
   <div class="editor-pane">
     <div class="card shadow-sm card-fill">
-      <div class="card-body d-flex flex-column">      
-        <h1 class="h5 mb-3"> 
+      <div class="card-body d-flex flex-column">
+        <h1 class="h5 mb-3">
           <div class="small" style="float: right">
-            <label class="form-label small">Tables/Views:</label>
+            <label class="form-label small">Previous Agents:</label>
             <select style="max-width: 200px;">
               <option>...</option>
               <option>UL_MODEL_DATA</option>
               <option>ILEC_DATA</option>
             </select>
-          </div>          
-          <code>Query Editor</code>        
+          </div>
+          <code>Agent Parameters</code>
         </h1>
-        <textarea id="query" name="" hidden>SELECT * FROM ILEC_DATA LIMIT 5;</textarea>
-        <div class="editor-shell">
-          <div id="editor"></div>
-        </div>
-        <div class="d-flex align-items-center gap-2 mt-3">          
-          <button id="run-btn" class="btn btn-primary">Run Query</button>          
+
+        <form method="post" class="mx-auto" style="max-width: 640px;">
+          <div class="editor-shell">
+            <div class="container my-3">
+
+              <div class="mb-3">
+                <label for="model_view" class="form-label">Modeling Data</label>
+                <select class="form-select" id="model_view" name="model_view" onchange="this.form.requestSubmit()">
+                  <option value="" disabled {{ "selected" if view_data[] }}>…</option>
+                  {% for v in view_data["model_view_data_options"] %}
+                  <option value="{{ v }}">{{ v }}</option>
+                  {% endfor %}
+                </select>
+                <div class="form-text">Must be an existing SQL view, use <a href="/data"">Data</a> to create</div>
+              </div>
+
+              <div class=" mb-3">
+                    <label for="target_variable" class="form-label">Target Variable</label>
+                    <select class="form-select" id="target_variable" name="target_variable">
+                      <option value="" disabled selected>Choose…</option>
+                      {% for col in view_data["model_view_data_cols"] %}
+                      <option value="{{ col }}">{{ col }}</option>
+                      {% endfor %}
+                    </select>
+                    <div class="form-text">Outcome you intend to predict.</div>
+                </div>
+
+                <div class="mb-3">
+                  <label for="offset_col" class="form-label">Offset</label>
+                  <select class="form-select" id="offset_col" name="offset_col">
+                    <option value="" disabled selected>Choose…</option>
+                    {% for col in view_data["model_view_data_cols"] %}
+                    <option value="{{ col }}">{{ col }}</option>
+                    {% endfor %}
+                  </select>
+                  <div class="form-text">Either an expected basis or exposure column</div>
+                </div>
+              </div>
+            </div>
+        </form>
+
+        <div class="d-flex align-items-center gap-2 mt-3">
+          <button id="run-btn" class="btn btn-primary">Run Agent</button>
           <fieldset class="text-muted ms-auto small">
-              <label>Read only:</label>
-              <input name="read_only" type="checkbox" checked>
-            </fieldset>
+
+          </fieldset>
           <span id="hint_readonly_checked" class="text-muted ms-auto small">
-            Only <code>SELECT ... FROM </code> is allowed.
+            <code>Agent Name:</code> <input type="textbox" name="run_name">
           </span>
         </div>
       </div>
@@ -102,7 +131,7 @@
     <div class="card shadow-sm card-fill">
       <div class="card-body d-flex flex-column">
         <div class="results-meta">
-          <h2 class="h6 m-0">Results</h2>
+          <h2 class="h6 m-0">Agent Response</h2>
           <span id="elapsed" class="badge bg-secondary"></span>
           <span id="error" class="badge bg-error text-dark">Error</span>
           <span id="truncated" class="badge bg-warning text-dark">Truncated</span>
@@ -136,7 +165,7 @@
         <details class="mt-2">
           <summary class="small text-muted">Export</summary>
           <a href="#">Excel</a>
-          <a href="#">CSV</a>          
+          <a href="#">CSV</a>
         </details>
       </div>
     </div>
@@ -145,22 +174,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script type="module">  
-  import {
-    EditorState,
-    EditorView,
-    basicSetup
-  } from "https://esm.sh/@codemirror/basic-setup@0.20.0?bundle";
-
-  const textarea = document.getElementById("query");
-  const editorParent = document.getElementById("editor");
-
-  // Initialize the editor
-  const state = EditorState.create({
-    doc: textarea.value,
-    extensions: [basicSetup],
-  });
-  const view = new EditorView({ state, parent: editorParent });
+<script type="module">
 
 </script>
 {% endblock %}

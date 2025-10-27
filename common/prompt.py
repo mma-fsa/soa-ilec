@@ -34,6 +34,9 @@ CMD_GLMNET_DESC = "executes R code for cmd_glmnet(), any subsequent calls to cmd
     "use this model. can only be called once in a chain of workspace_ids. If it needs to be called again,"\
     "backtrack to the workspace_id before cmd_glmnet() was called."
 
+CMD_FINALIZE_DESC = "Finalizes model workflows that were started with cmd_init()."\
+    "This may be called exactly once after all other cmd_*() calls, to indicate the final / best workspace."
+
 # ---- Agent Instructions + Prompt Templates ----
 with open(AGENT_R_LIB, "r") as fh:
     AGENT_R_CODE = "".join(fh.readlines())
@@ -78,9 +81,15 @@ class ModelingPrompt:
              """Run a decision tree on the results using cmd_rpart() and evaluate the final results."""\
             f"""Backtrack if necessary using what you learned from the inference results on {test_dataset_name} """\
                 """and repeat the rest of modeling process, but do not call cmd_init() again."""\
-             """Provide a final summary with a short description of the model rationale, any data quality problems and adjustments,"""\
-                """and the workspace_id associated with the final step in the modeling process."""
-
+            f"""Once a best model has been determined, call cmd_finalize() with a workspace_id that has performed all the steps of the modeling process,"""\
+                """including cmd_run_inference() and any calls to cmd_rpart() that were performed on the cmd_run_inference() datasets."""\
+             """Provide an final summary in markdown format with the following headers/sections in order: """\
+                """Overview, Data Quality, Inferential Modeling, Modeling, Model Validation. Make extensive use of markdown to maximize readability."""\
+             """If backtracking was used, use sub-headers within each of Inferential Modeling, Modeling, and Model Validation """\
+             """that say "round #1", "round #2"."""\
+            f"""Prefer to use bullet points and avoid deep nesting. Use checkmarks next to metrics that provide evidence of model soundness."""\
+             """Avoid statistical language, and use concise, easy to read, short sentences especially in the Overview section.""" 
+             
 
     def __str__(self):
         return self.modeling_prompt

@@ -11,7 +11,7 @@ import httpx
 import uvicorn
 
 from app_shared import Database
-from vwmodel import DataViewModel
+from vwmodel import DataViewModel, AgentViewModel
 from pathlib import Path
 
 # --- Config ---
@@ -104,7 +104,38 @@ async def data(request: Request):
     )
 
 async def agent(request: Request):
-    return render("agent.html", title="ILEC Agent Interface")
+
+    form_data = await request.form()
+    
+    with Database.get_duckdb_conn() as conn:
+        
+        avm = AgentViewModel(conn)
+        
+        mv_opts = list(map(
+            lambda x: x[0], 
+            avm.get_views()["rows"]))
+        
+        view_data = {
+            "model_view_data_options" : mv_opts,
+            "model_view_data_cols" : [],
+            "param_selected_view" : "",
+            "param_selected_target" : "",
+            "param_selected_offset" : ""
+        }
+        
+        if request.method == "POST":            
+            selected_view = str(form_data["model_view"]).strip()            
+            if selected_view != "":
+                view_columns = avm.get_columns(selected_view)
+                col_name_idx = view_columns["rows"].index("name")
+                view_data["model_view_data_cols"] = list(map(
+                    lambda x: x[col_name_idx],
+                    view_columns["rows"]))
+            
+            if "run_agent" in form_data.keys():
+                pass
+            
+    return render("agent.html", view_data=view_data)
 
 async def audit(request: Request):
     return render("audit.html", title="ILEC Agent Interface")
@@ -112,7 +143,8 @@ async def audit(request: Request):
 routes = [
     Route("/", data, methods=["GET", "POST"]),
     Route("/data", data, methods=["GET", "POST"]),
-    #Route("/run_query", run_query, methods=["POST"]),
+    Route("/agent", agent, methods=["GET", "POST"]),
+    Route("/audit", audit, methods=["GET", "POST"]),
     Mount("/static", app=StaticFiles(directory="static"), name="static"),
 ]
 

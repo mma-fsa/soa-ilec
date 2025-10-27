@@ -97,3 +97,16 @@ class DataViewModel:
             
         return get_query_data(res)
 
+class AgentViewModel:
+    
+    def __init__(self, conn):
+        self.conn = conn
+        
+    def get_views(self):
+        return DataViewModel(self.conn).get_views()
+    
+    def get_columns(self, view_name):
+        return get_query_data(
+            self.conn.execute(f"pragma table_info({view_name})")
+        )
+    

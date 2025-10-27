@@ -73,7 +73,7 @@
             <label class="form-label small">Load View:</label>
             <form method="post" style="display: contents;">
               <select id="load_vw" name="load_vw" style="max-width: 150px;" onchange="this.form.requestSubmit()">
-                <option value="" selected>...</option>
+                <option value="" disabled selected>...</option>
                 {% for v in view_data["view_names"] %}
                   <option value="{{ v }}">{{ v }}</option>                  
                 {% endfor %}

@@ -21,14 +21,28 @@ from env_vars import DEFAULT_DDB_ROW_LIMIT
 
 # get tool descriptions
 from prompt import SQL_SCHEMA_DESC, SQL_RUN_DESC, CMD_INIT_DESC, CMD_CREATE_DATASET_DESC,\
-    CMD_RUN_INFERENCE_DESC, CMD_RPART_DESC, CMD_GLMNET_DESC
+    CMD_RUN_INFERENCE_DESC, CMD_RPART_DESC, CMD_GLMNET_DESC, CMD_FINALIZE_DESC
+
+# for finalize()
+from audit import AuditLogReader
 
 # ---- Default R environment setup ----
 def create_REnv(workspace_id, no_cmd=False):
+    
+        
     with Database.get_session_conn() as con:
         session = AppSession(con)
+        workspace_dir = Path(session["MCP_WORK_DIR"])
+
+        # check if this workspace dir has been finalized already
+        # via a call to cmd_finalize()
+        check_finalize = workspace_dir / "final.json"
+
+        if (check_finalize.exists()):
+            raise Exception("cmd_finalize() has already been called")
+
         return REnv(
-            work_dir=session["MCP_WORK_DIR"],
+            work_dir=workspace_dir,
             db_pragmas=Database.DDB_PRAGMAS,
             last_workspace_id=workspace_id,
             no_cmd=no_cmd
@@ -251,6 +265,34 @@ def cmd_glmnet(workspace_id, dataset : str, x_vars : List[str], design_matrix_va
         "workspace_id": new_workspace_id,
         "result": dataset_res
     }
+
+
+@mcp.tool(description=CMD_FINALIZE_DESC)
+def cmd_finalize(workspace_id):
+    
+    final_workspace_id = None
+    renv = create_REnv(workspace_id, no_cmd=True)
+    with renv:
+        final_workspace_id = renv.workspace_id
+
+    with Database.get_session_conn() as con:
+        session = AppSession(con)
+        workspace_dir = Path(session["MCP_WORK_DIR"])
+    
+        audit_reader = AuditLogReader(workspace_dir)
+
+        final_path, full_tree = audit_reader.traverse_audit_log(workspace_id)
+
+        
+    
+    return {
+        "workspace_id": final_workspace_id, 
+        "result": {
+            "success" : True,
+            "message" : "workspace finalized, no further calls to cmd_*() allowed, your modeling work is done."
+        }}
+
+
 
 # Build the MCP ASGI app
 mcp_app = mcp.streamable_http_app()  # exposes /mcp
