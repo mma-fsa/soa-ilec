@@ -1,4 +1,4 @@
-import os
+import os, re
 from starlette.applications import Starlette
 from starlette.responses import HTMLResponse, FileResponse, JSONResponse
 from starlette.requests import Request
@@ -6,12 +6,13 @@ from starlette.routing import Route, Mount
 from starlette.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
 import sqlglot
-from sqlglot import expressions as exp
-import httpx
+import mistune
 import uvicorn
 
-from app_shared import Database
+from app_shared import Database, AppSession
 from vwmodel import DataViewModel, AgentViewModel
+from agent import AssumptionsAgent
+from prompt import ModelingPrompt
 from pathlib import Path
 
 # --- Config ---
@@ -24,7 +25,8 @@ def render(template_name, **ctx):
     template = templates.get_template(template_name)
     return HTMLResponse(template.render(**ctx))
 
-# --- Routes ---
+# --- Routes that render views / handle posts ---
+
 async def data(request: Request):
     
     form_data = await request.form()
@@ -39,7 +41,6 @@ async def data(request: Request):
     with Database.get_duckdb_conn(read_only = read_only) as conn:
     
         dvm = DataViewModel(conn)
-
         view_names = list(map(lambda x: x[0], dvm.get_views()["rows"]))
         
         # initialize data to be rendered
@@ -130,20 +131,132 @@ async def agent(request: Request):
                 col_name_idx = view_columns["rows"].index("name")
                 view_data["model_view_data_cols"] = list(map(
                     lambda x: x[col_name_idx],
-                    view_columns["rows"]))
-            
-            if "run_agent" in form_data.keys():
-                pass
+                    view_columns["rows"]))            
             
     return render("agent.html", view_data=view_data)
 
 async def audit(request: Request):
     return render("audit.html", title="ILEC Agent Interface")
 
+async def agent_response(request: Request):
+    return render("audit.html", title="ILEC Agent Interface")
+
+# --- Routes for js async (XmlHttpRequest) ---
+async def start_agent(request: Request):
+    
+    # read GET params
+    qp = request.query_params
+    agent_name = qp.get("agent_name", "").strip()
+    model_data_view = qp.get("model_data_view", "").strip()
+    target_var = qp.get("target_var", "").strip()
+    offset_var = qp.get("offset_var", "").strip()
+
+    # helpers
+    def get_error_json(message = "error", invalid = None):
+        invalid = [] if invalid is None else invalid
+        return JSONResponse({
+                "success": False,
+                "message": message,
+                "invalid": invalid,
+            },
+            status_code=400)
+
+    # check missing
+    missing = [
+        name for name, val in (
+            ("agent_name", agent_name),
+            ("model_data_view", model_data_view),
+            ("target_var", target_var),
+            ("offset_var", offset_var),
+        ) if not val
+    ]
+
+    if missing:
+        return get_error_json(
+            message = f"Missing required parameters: {', '.join(missing)}",
+            invalid = missing
+        )
+    
+    # check valid name    
+    if not AssumptionsAgent.is_valid_agent_name(agent_name):
+        return get_error_json(
+            message = f"Invalid agent_name: '{agent_name}'",
+            invalid = ["agent_name"]
+        )
+    
+    cols = None
+    with Database.get_duckdb_conn() as conn:
+        avm = AgentViewModel(conn)
+        cols = None
+        try:
+            cols = avm.get_columns(model_data_view)
+        except:
+            return get_error_json(
+                message = f"Invalid model_data_view: '{model_data_view}', error fetching columns",
+                invalid = ["model_data_view"]
+            )
+
+        cols = set(cols)
+        if not offset_var in cols:
+            return get_error_json(
+                message = f"Invalid offset_var: '{offset_var}', does not exist in model_data_view." ,
+                invalid = ["offset_var"]
+            )
+    
+        if not target_var in cols:
+            return get_error_json(
+                message = f"Invalid target_var: '{target_var}', does not exist in model_data_view." ,
+                invalid = ["target_var"]
+            )
+
+    predictor_cols = list(cols.difference(set([offset_var, target_var])))
+
+    # create the prompt
+    modeling_prompt = ModelingPrompt(
+        model_data_vw = model_data_view,
+        predictors=predictor_cols,
+        target_var=target_var,
+        offset_var=offset_var
+    )
+    
+    # create an assumptions agent
+    assump_agent = AssumptionsAgent()
+    agent_response = await assump_agent.prompt_async(
+        agent_name,
+        str(modeling_prompt)
+    )
+
+    # save the response markdown + html
+    work_dir = None
+    with Database.get_session_conn() as conn:
+        app_session = AppSession(conn)
+        work_dir = Path(app_session["MCP_WORK_DIR"])
+
+    with open(work_dir / "response.md", "w") as fh:
+        fh.write(agent_response)
+
+    md_render = mistune.create_markdown()
+    agent_response_html = md_render(agent_response)
+    with open(work_dir / "response.html", "w") as fh:
+        fh.write(agent_response_html)
+
+    return JSONResponse({
+        "agent_name": agent_name,
+        "model_data_view": model_data_view,
+        "target_var": target_var,
+        "offset_var": offset_var,
+    })
+
+async def poll_agent(request: Request):
+    pass
+
 routes = [
     Route("/", data, methods=["GET", "POST"]),
     Route("/data", data, methods=["GET", "POST"]),
     Route("/agent", agent, methods=["GET", "POST"]),
+    Route("/start_agent", start_agent, methods=["GET"]),
+    Route("/poll_agent", poll_agent, methods=["GET"]),
+    Route("/agent_response", agent_response, methods=["GET"]),
     Route("/audit", audit, methods=["GET", "POST"]),
     Mount("/static", app=StaticFiles(directory="static"), name="static"),
 ]

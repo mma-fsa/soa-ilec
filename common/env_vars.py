@@ -29,9 +29,11 @@ AGENT_R_LIB = "/home/mike/workspace/soa-ilec/soa-ilec/mcp/ilec_r_lib.R"
 DEFAULT_MCP_URL = "http://127.0.0.1:9090/mcp/"
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or Path("/home/mike/workspace/soa-ilec/soa-ilec/.openai_key").read_text().strip()
 
-# ---- Default Session Settings, stuff the client can change ----
+# ---- Default Session Settings, global state for the UI + MCP ----
 DEFAULT_SESSION_SETTINGS = {
-    "MCP_WORK_DIR" : DEFAULT_AGENT_WORK_DIR / Path("/test_agent/"),
+    "AGENT_NAME" : "test_agent",
+    "AGENT_STATUS" : "NOT_RUNNING",    
+    "MCP_WORK_DIR" : DEFAULT_AGENT_WORK_DIR / Path("/test_agent/"),    
     "MODEL_DB": DEFAULT_DDB_PATH,
     "MODEL_DATA_VW" : "ILEC_DATA"
 }
