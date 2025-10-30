@@ -38,9 +38,10 @@
   }
 
   .results-body {
-    overflow: auto;
+    overflow: scroll;
     flex: 1;
     min-height: 300px;
+    max-height: 60vh;
   }
 
   .results-meta {
@@ -80,10 +81,10 @@
 
               <div class="mb-3">
                 <label for="model_view" class="form-label">Modeling Data</label>
-                <select class="form-select" id="model_view" name="model_view" onchange="this.form.requestSubmit()">
-                  <option value="" disabled {{ "selected" if view_data[] }}>…</option>
+                <select class="form-select" id="param_selected_view" name="param_selected_view" onchange="this.form.requestSubmit()">
+                  <option value="" disabled {{ "selected" if view_data["param_selected_view"] == "" else "" }}>…</option>
                   {% for v in view_data["model_view_data_options"] %}
-                  <option value="{{ v }}">{{ v }}</option>
+                  <option value="{{ v }}" {{ "selected" if view_data["param_selected_view"] == v else "" }}>{{ v }}</option>
                   {% endfor %}
                 </select>
                 <div class="form-text">Must be an existing SQL view, use <a href="/data"">Data</a> to create</div>
@@ -115,12 +116,9 @@
         </form>
 
         <div class="d-flex align-items-center gap-2 mt-3">
-          <button id="run-btn" class="btn btn-primary">Run Agent</button>
-          <fieldset class="text-muted ms-auto small">
-
-          </fieldset>
+          <button id="run-agent" class="btn btn-primary">Run Agent</button>          
           <span id="hint_readonly_checked" class="text-muted ms-auto small">
-            <code>Agent Name:</code> <input type="textbox" name="run_name">
+            <code>Agent Name:</code> <input id="param_aganet_name" type="textbox" name="run_name">
           </span>
         </div>
       </div>
@@ -132,9 +130,8 @@
       <div class="card-body d-flex flex-column">
         <div class="results-meta">
           <h2 class="h6 m-0">Agent Response</h2>
-          <span id="elapsed" class="badge bg-secondary"></span>
-          <span id="error" class="badge bg-error text-dark">Error</span>
-          <span id="truncated" class="badge bg-warning text-dark">Truncated</span>
+          <span id="elapsed" class="badge bg-success">Finished</span>
+          <span id="error" class="badge bg-warning text-dark">Processing...</span>          
         </div>
         <div id="results" class="results-body">
           {% if data %}
@@ -164,8 +161,8 @@
         </div>
         <details class="mt-2">
           <summary class="small text-muted">Export</summary>
-          <a href="#">Excel</a>
-          <a href="#">CSV</a>
+          <a href="#">Markdown</a>
+          <a href="#">HTML</a>
         </details>
       </div>
     </div>
@@ -174,6 +171,16 @@
 {% endblock %}
 
 {% block scripts %}
+<script
+  src="https://code.jquery.com/jquery-3.7.1.min.js"  
+  crossorigin="anonymous"></script>
+
+<script>
+  $("").onclick(function(e) {
+
+  })
+</script>
+
 <script type="module">
 
 </script>

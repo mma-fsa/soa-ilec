@@ -3,6 +3,7 @@ from env_vars import DEFAULT_DATA_EXPORT_DIR
 import uuid
 import pandas as pd
 from pathlib import Path
+from operator import itemgetter
 
 EXCEL_MAX_EXPORT_ROWS = 1_048_576
 
@@ -14,6 +15,20 @@ def get_query_data(res, limit : int = -1):
         "cols" : cols,
         "rows" : rows if limit < 0 else rows[:limit]
     }
+
+def get_columns_from_query_data(query_data, columns):
+    if type(columns) == str or len(columns) == 1:
+        col_name = columns if type(columns) == str else columns[0]
+        col_idx = query_data["cols"].index(col_name)
+        return list(map(lambda r: r[col_idx], query_data["rows"]))
+    else:
+        col_idxs = [query_data["cols"].index(cn) for cn in columns]
+        get_cols = itemgetter(*col_idxs)
+        return list(
+            map(
+                lambda r: get_cols(r), query_data["rows"]
+            )
+        )
 
 class DataViewModel:
 
@@ -72,17 +87,15 @@ class DataViewModel:
             WHERE table_schema NOT IN ('information_schema', 'pg_catalog')
                   and table_type = 'VIEW'
             ORDER BY table_name"""
-        return self.run_query(query)
+        res = self.run_query(query)
+
+        return get_columns_from_query_data(res, "table_name")
 
     def get_view_definition(self, vw_name):
         
-        all_views = self.get_views()
-        table_name_idx = all_views["cols"].index("table_name")
-        table_type_idx = all_views["cols"].index("table_type")
-        
         view_data = list(filter(
-            lambda x: x[table_name_idx] == vw_name, 
-            all_views["rows"]))
+            lambda vw: vw == vw_name, 
+            self.get_views()))
         
         if len(view_data) == 0:
             raise Exception("View {vw_name} does not exist")
@@ -95,8 +108,11 @@ class DataViewModel:
             WHERE table_name = ? and table_schema NOT IN ('information_schema', 'pg_catalog')""",
             [vw_name])
             
-        return get_query_data(res)
-
+        return get_columns_from_query_data(
+            get_query_data(res),
+            "view_definition"
+        )[0]
+    
 class AgentViewModel:
     
     def __init__(self, conn):

@@ -282,13 +282,14 @@ def cmd_finalize(workspace_id) -> Dict[str , Any]:
         audit_reader = AuditLogReader(workspace_dir)
 
         sql_log = audit_reader.traverse_sql_audit_log()
-        final_model_log, all_model_logs = audit_reader.traverse_model_audit_log(workspace_id)
+        final_model_log, all_model_logs, all_by_time = audit_reader.traverse_model_audit_log(workspace_id)
 
         finalize_data = {
             "workspace_id": final_workspace_id,
             "sql_log" : sql_log,
             "final_model_log" : final_model_log,
-            "all_model_logs" : all_model_logs
+            "all_model_logs" : all_model_logs,
+            "all_model_logs_by_time" : all_by_time
         }
 
         with open(workspace_dir / Path("final.json"), "w") as fh:

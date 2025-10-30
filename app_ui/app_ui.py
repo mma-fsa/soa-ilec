@@ -41,7 +41,7 @@ async def data(request: Request):
     with Database.get_duckdb_conn(read_only = read_only) as conn:
     
         dvm = DataViewModel(conn)
-        view_names = list(map(lambda x: x[0], dvm.get_views()["rows"]))
+        view_names = dvm.get_views()
         
         # initialize data to be rendered
         query_results = {}
@@ -67,13 +67,12 @@ async def data(request: Request):
 
             elif "load_vw" in form_data.keys():
                 try:
-                    raw_sql = dvm.get_view_definition(form_data["load_vw"])["rows"][0][0]                    
+                    raw_sql = dvm.get_view_definition(form_data["load_vw"])
+                    view_data["query"] = sqlglot.transpile(raw_sql, read="duckdb", write="duckdb", pretty=True)[0]
                 except Exception as e:
                     view_data["query_success"] = False
                     view_data["query_message"] = str(e)
-
-                query = sqlglot.transpile(raw_sql, read="duckdb", write="duckdb", pretty=True)[0]
-            
+                            
             elif "export_results" in form_data.keys():
                 
                 export_type = form_data["export_results"]
@@ -112,9 +111,7 @@ async def agent(request: Request):
         
         avm = AgentViewModel(conn)
         
-        mv_opts = list(map(
-            lambda x: x[0], 
-            avm.get_views()["rows"]))
+        mv_opts = avm.get_views()
         
         view_data = {
             "model_view_data_options" : mv_opts,
@@ -125,13 +122,15 @@ async def agent(request: Request):
         }
         
         if request.method == "POST":            
-            selected_view = str(form_data["model_view"]).strip()            
+            selected_view = str(form_data["param_selected_view"]).strip()            
             if selected_view != "":
                 view_columns = avm.get_columns(selected_view)
-                col_name_idx = view_columns["rows"].index("name")
+                col_name_idx = view_columns["cols"].index("name")
                 view_data["model_view_data_cols"] = list(map(
                     lambda x: x[col_name_idx],
-                    view_columns["rows"]))            
+                    view_columns["rows"]))
+            
+            view_data["param_selected_view"] = selected_view
             
     return render("agent.html", view_data=view_data)
 
@@ -189,7 +188,13 @@ async def start_agent(request: Request):
         avm = AgentViewModel(conn)
         cols = None
         try:
-            cols = avm.get_columns(model_data_view)
+            cols = list(
+                map(
+                    lambda x: x[1],
+                    avm.get_columns(model_data_view)["rows"]
+                )
+            )
+                
         except:
             return get_error_json(
                 message = f"Invalid model_data_view: '{model_data_view}', error fetching columns",
@@ -231,6 +236,7 @@ async def start_agent(request: Request):
     with Database.get_session_conn() as conn:
         app_session = AppSession(conn)
         work_dir = Path(app_session["MCP_WORK_DIR"])
+        agent_status = app_session["AGENT_STATUS"]
 
     with open(work_dir / "response.md", "w") as fh:
         fh.write(agent_response)
@@ -238,13 +244,15 @@ async def start_agent(request: Request):
     md_render = mistune.create_markdown()
     agent_response_html = md_render(agent_response)
     with open(work_dir / "response.html", "w") as fh:
-        fh.write(agent_response_html)
+        fh.write(agent_response_html)    
 
     return JSONResponse({
         "agent_name": agent_name,
+        "agent_status":agent_status,
         "model_data_view": model_data_view,
         "target_var": target_var,
         "offset_var": offset_var,
+        "response" : agent_response_html
     })
 
 async def poll_agent(request: Request):
