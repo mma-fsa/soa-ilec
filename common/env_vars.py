@@ -38,3 +38,4 @@ DEFAULT_SESSION_SETTINGS = {
     "MODEL_DATA_VW" : "ILEC_DATA"
 }
 
+COMMON_TEMPLATE_DIR = "/home/mike/workspace/soa-ilec/soa-ilec/common/templates/"

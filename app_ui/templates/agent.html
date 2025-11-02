@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}Query · ILEC{% endblock %}
+{% block title %}Run Agent{% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codemirror/theme-one-dark@6.2.0/theme-one-dark.css" />
@@ -26,6 +26,13 @@
     }
   }
 
+  .agent-done,
+  .audit-response,
+  .agent-response,
+  .agent-running {
+    display: none;
+  }
+
   .card-fill {
     height: 72vh;
     display: flex;
@@ -42,6 +49,15 @@
     flex: 1;
     min-height: 300px;
     max-height: 60vh;
+  }
+
+  .results-body h2 {
+    margin-top: 15px;
+    font-size: smaller;
+  }
+
+  .results-body details {
+    margin-top: 10px;
   }
 
   .results-meta {
@@ -72,6 +88,7 @@
               <option>ILEC_DATA</option>
             </select>
           </div>
+          <i class="fa-solid fa-table"></i>
           <code>Agent Parameters</code>
         </h1>
 
@@ -81,10 +98,12 @@
 
               <div class="mb-3">
                 <label for="model_view" class="form-label">Modeling Data</label>
-                <select class="form-select" id="param_selected_view" name="param_selected_view" onchange="this.form.requestSubmit()">
-                  <option value="" disabled {{ "selected" if view_data["param_selected_view"] == "" else "" }}>…</option>
+                <select class="form-select" id="param_selected_view" name="param_selected_view"
+                  onchange="this.form.requestSubmit()">
+                  <option value="" disabled {{ "selected" if view_data["param_selected_view"]=="" else "" }}>…</option>
                   {% for v in view_data["model_view_data_options"] %}
-                  <option value="{{ v }}" {{ "selected" if view_data["param_selected_view"] == v else "" }}>{{ v }}</option>
+                  <option value="{{ v }}" {{ "selected" if view_data["param_selected_view"]==v else "" }}>{{ v }}
+                  </option>
                   {% endfor %}
                 </select>
                 <div class="form-text">Must be an existing SQL view, use <a href="/data"">Data</a> to create</div>
@@ -116,9 +135,9 @@
         </form>
 
         <div class="d-flex align-items-center gap-2 mt-3">
-          <button id="run-agent" class="btn btn-primary">Run Agent</button>          
+          <button id="run-agent" class="btn btn-primary">Run Agent</button>
           <span id="hint_readonly_checked" class="text-muted ms-auto small">
-            <code>Agent Name:</code> <input id="param_aganet_name" type="textbox" name="run_name">
+            <code>Agent Name:</code> <input id="param_agent_name" type="textbox" name="run_name">
           </span>
         </div>
       </div>
@@ -130,34 +149,46 @@
       <div class="card-body d-flex flex-column">
         <div class="results-meta">
           <h2 class="h6 m-0">Agent Response</h2>
-          <span id="elapsed" class="badge bg-success">Finished</span>
-          <span id="error" class="badge bg-warning text-dark">Processing...</span>          
+          <span id="elapsed" class="badge bg-success agent-done">Agent Finished</span>
+          <span id="error" class="badge bg-warning text-dark agent-running">Running...</span>
         </div>
         <div id="results" class="results-body">
-          {% if data %}
-          <div class="table-responsive" style="max-height: 100%; overflow-y: auto;">
-            <table class="table table-sm table-striped mb-0" style="font-size: x-small;">
-              <thead>
-                <tr>
-                  {% for col in data.columns %}
-                  <th>{{ col }}</th>
-                  {% endfor %}
-                </tr>
-              </thead>
-              <tbody>
-                {% for row in data.rows %}
-                <tr>
-                  {% for cell in row %}
-                  <td>{{ cell }}</td>
-                  {% endfor %}
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
+          <!-- Tabs -->
+          <ul class="nav nav-tabs" id="demoTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="agent-tab" data-bs-toggle="tab" data-bs-target="#agent" type="button"
+                role="tab" aria-controls="agent" aria-selected="true">
+                Agent Response
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="audit-tab" data-bs-toggle="tab" data-bs-target="#audit" type="button"
+                role="tab" aria-controls="audit" aria-selected="false">
+                Modeling Log
+              </button>
+            </li>
+          </ul>
+
+          <!-- Tab panes -->
+          <div class="tab-content border border-top-0 p-3" id="demoTabsContent">
+            <div class="tab-pane fade show active" id="agent" role="tabpanel" aria-labelledby="agent-tab">
+              <p class="agent-running">
+                <img src="img/loading.gif"> Agent Running...
+              </p>
+              <div id="agent-response">
+
+              </div>
+            </div>
+            <div class="tab-pane fade" id="audit" role="tabpanel" aria-labelledby="audit-tab">
+              <p class="agent-running">
+                <img src="img/loading.gif"> Agent Running...
+              </p>
+              <div id="audit-response">
+
+              </div>
+            </div>
           </div>
-          {% else %}
-          <div class="text-muted">Run a query to see results here.</div>
-          {% endif %}
+
         </div>
         <details class="mt-2">
           <summary class="small text-muted">Export</summary>
@@ -171,14 +202,56 @@
 {% endblock %}
 
 {% block scripts %}
-<script
-  src="https://code.jquery.com/jquery-3.7.1.min.js"  
-  crossorigin="anonymous"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
 
 <script>
-  $("").onclick(function(e) {
+  $("#run-agent").click(function (e) {
+    e.preventDefault();
 
-  })
+    // Get parameter values from inputs
+    var param_selected_view = $("#param_selected_view").val();
+    var target_variable = $("#target_variable").val();
+    var offset_col = $("#offset_col").val();
+    var agent_name = $("#param_agent_name").val();
+
+    // Show "running" indicators, hide "done" indicators
+    $(".agent-running").show();
+    $(".agent-done").hide();
+    $("#run-agent").prop("disabled", true);
+
+    // Fire GET request
+    $.ajax({
+      url: "/start_agent",
+      type: "GET",
+      dataType: "json",
+      data: {
+        "agent_name" : agent_name,
+        "model_data_view": param_selected_view,
+        "target_var": target_variable,
+        "offset_var": offset_col
+      },
+      success: function (response) {
+        // Update the response divs
+        $("#agent-response").html(response.agent_response);
+        $("#audit-response").html(response.audit_log);
+
+        // Hide running indicators, show done indicators
+        $(".agent-running").hide();
+        $(".agent-done").show();
+        $("#run-agent").prop("disabled", false);
+      },
+      error: function (xhr, status, error) {
+        try {
+          message = xhr.responseJSON["message"]
+        } catch(e) {
+          message = "Error: " + error
+        }
+        $("#agent-response").html("<div class='text-danger'>" + message + "</div>");
+        $(".agent-running").hide();
+        $("#run-agent").prop("disabled", false);
+      }
+    });
+  });
 </script>
 
 <script type="module">

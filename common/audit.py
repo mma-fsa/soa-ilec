@@ -4,6 +4,10 @@ import re
 import copy
 from pathlib import Path
 from collections import defaultdict, deque
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+from env_vars import COMMON_TEMPLATE_DIR
+
+PTR_PATTERN = re.compile(r'^"([A-Za-z0-9-]+)"->"([A-Za-z0-9-]+)"$')
 
 class AuditLogReader:
 
@@ -14,7 +18,13 @@ class AuditLogReader:
     def __init__(self, work_dir):
         self.work_dir = Path(str(work_dir))
 
-    def traverse_model_audit_log(self, final_workspace_id):
+    def traverse_model_audit_log(self, final_workspace_id=None):
+
+        if final_workspace_id is None:
+            final_ws_data = self.work_dir / "final.json"
+            with open(final_ws_data, "r") as fh:
+                ws_data = json.load(fh)
+                final_workspace_id = ws_data["workspace_id"]
         
         final_path = self._traverse_branch(final_workspace_id)
         full_tree, all_entries = self._traverse_tree(final_path["workspace_id"])
@@ -67,8 +77,6 @@ class AuditLogReader:
         parent_node = None
         child_node = None
 
-        ptr_pattern = re.compile(r'^"([A-Za-z0-9-]+)"->"([A-Za-z0-9-]+)"$')
-
         # build the adjacency matrix
         for path in self.work_dir.rglob("workspace_pointer.txt"):
             ptr_path = path.resolve()
@@ -76,7 +84,7 @@ class AuditLogReader:
                 ptr_data = fh.read().strip()
                 is_child_node = (ptr_data != "root")
                 if is_child_node:                    
-                    m = ptr_pattern.search(ptr_data)
+                    m = PTR_PATTERN.search(ptr_data)
                     if not m:
                         raise Exception(f"Invalid workspace_pointer.txt: {ptr_path}")                
                     parent_node, child_node = m.groups()
@@ -170,12 +178,34 @@ class AuditLogReader:
                     else AuditLogReader.NODE_TYPE_CHILD
 
     def _get_node_log(self, workspace_id):
-        log_entry_file = self.work_dir / Path(f"workspace_{workspace_id}") / Path("tool_call.json")
+        ws_root = self.work_dir / Path(f"workspace_{workspace_id}")
+        log_entry_file = ws_root / Path("tool_call.json")
+        ws_ptr_file = ws_root / Path("workspace_pointer.txt")
         tool_call = None
+        # check if tool_call.json exists, otherwise create a 
+        # stand-in from the workspace_pointer.txt
         if log_entry_file.exists():
             with open(log_entry_file, "r") as fh:
-                tool_call = json.load(fh)        
-        
+                tool_call = json.load(fh)
+        elif ws_ptr_file.exists():
+            last_ws_id = None
+            this_ws_id = None
+            with open(ws_ptr_file, "r") as fh:
+                ptr_data = fh.read().strip()
+                m = PTR_PATTERN.search(ptr_data)
+                if not m:
+                    raise Exception(f"Invalid workspace_pointer.txt: {ws_root}")
+                last_ws_id, this_ws_id = m.groups()            
+            tool_call = AuditLogEntry._create_log_entry(
+                last_ws_id,
+                this_ws_id,
+                "unknown",
+                [],
+                {}
+            )
+        else:
+            raise Exception("No tool_call or workspace pointer in {}")
+
         return tool_call
     
     @staticmethod
@@ -226,15 +256,26 @@ class AuditLogEntry:
         self.audit_log_dir = r_env.this_workspace_id
 
     def log_tool_call(self, tool_name, args, result):        
-        audit_log_entry = {
-            "last_workspace_id": self.last_workspace_id,
-            "workspace_id": self.workspace_id,
+        audit_log_entry = self._create_log_entry(
+            self.last_workspace_id,
+            self.workspace_id,
+            tool_name,
+            args,
+            result
+        )
+        with open(self.audit_log_dir / "tool_call.json", "w") as fh:
+            json.dump(audit_log_entry, fh, indent=2)
+    
+    @staticmethod
+    def _create_log_entry(last_workspace_id, workspace_id, tool_name, args, result):
+        return {
+            "last_workspace_id": last_workspace_id,
+            "workspace_id": workspace_id,
             "tool_name" : tool_name,
             "args" : args,
             "result" : result
         }
-        with open(self.audit_log_dir / "tool_call.json", "w") as fh:
-            json.dump(audit_log_entry, fh, indent=2)
+
     
 class AuditLogRenderer:
 
@@ -251,8 +292,20 @@ class AuditLogRenderer:
             raise FileNotFoundError(f"final.json does not exist in {mcp_work_dir}")
 
 
-    def render(self, reader : AuditLogReader):
-        pass
+    def render(self):
 
-        # audit_log_data = 
-        # with open(self.audit_log_data, "r") as fh:
+        reader = AuditLogReader(self.mcp_work_dir)
+        
+        sql_log = reader.traverse_sql_audit_log()
+        final_cmd_log, _, full_cmd_log_by_time = reader.traverse_model_audit_log()
+                
+        env = Environment(
+            loader=FileSystemLoader(COMMON_TEMPLATE_DIR),
+            autoescape=select_autoescape(["html", "xml"])
+        )        
+        audit_template = env.get_template("audit_log.html")        
+        
+        return audit_template.render(
+            sql_log = sql_log,
+            cmd_log = full_cmd_log_by_time
+        )

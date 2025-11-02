@@ -117,10 +117,11 @@ class ILECREnvironment:
                     # second pass, copy files
                     subprocess.run([
                         "rsync", "-a",                        
-                        "--exclude=*.parquet",
-                        "--exclude=*.rds",
-                        "--exclude=*.json",
-                        "--exclude=workspace_pointer.txt",
+                        "--exclude=*.parquet", # symlinked, not copied
+                        "--exclude=*.rds", # symlinked, not copied
+                        "--exclude=*.json", # not copied
+                        "--exclude=*.png", # not copied
+                        "--exclude=workspace_pointer.txt", # not copied
                         f"{last_workspace_path}/", f"{this_workspace_id}/"],
                         check=True)
                     

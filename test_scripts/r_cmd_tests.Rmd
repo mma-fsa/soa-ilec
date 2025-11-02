@@ -13,7 +13,7 @@ library(rpart)
 library(tidyverse)
 
 AGENT_LIB = "~/workspace/soa-ilec/soa-ilec/mcp/ilec_r_lib.R"
-AGENT_WS_DIR = "/home/mike/workspace/soa-ilec/soa-ilec/mcp_agent_work/session_abcedfg"
+AGENT_WS_DIR = "~/workspace/soa-ilec/soa-ilec/data/workspaces/ul_model_data/workspace_8971f3ab-971f-4ad7-a984-72c4926ea63d"
 
 ```
 
@@ -33,7 +33,7 @@ system(paste0("mkdir -p ", AGENT_WS_DIR))
 pq_path <- "/home/mike/workspace/soa-ilec/soa-ilec/data/ilec_perm_historical.parquet"
 
 if (!exists("conn")) {
-  conn <- DBI::dbConnect(duckdb::duckdb(), paste0(AGENT_WS_DIR, "/model_data.duckdb"))
+  conn <- DBI::dbConnect(duckdb::duckdb(read_only = T, dbdir = "~/workspace/soa-ilec/soa-ilec/data/ilec_data.duckdb"))
   DBI::dbExecute(conn, "set memory_limit='4GB'")
 }
 
@@ -69,13 +69,73 @@ cmd_create_dataset(conn, "testing_data", "select * from ILEC_DATA where observat
 
 ```{r}
 
-source(AGENT_LIB)
 setwd(AGENT_WS_DIR)
 
-x_vars <- c("gender", "attained_age", "smoker_status", "issue_year")
+cmd_rpart <- function(conn, dataset, x_vars, offset_var, y_var, max_depth, cp) {
+
+  # check if the dataset is a parquet file
+  pq_filename <- sprintf("%s.parquet", dataset)
+  if (file.exists(pq_filename)) {
+    tbl_dataset <- tbl(conn, sprintf("read_parquet('%s.parquet')", dataset))  
+  } else {
+    # assume that it exists in duckdb (e.g. table / view)
+    tbl_dataset <- tbl(conn, dataset)
+  }
+  
+  rpart_data <- tbl_dataset %>%
+    group_by(across(all_of(x_vars))) %>%
+    summarise(
+      offset = sum(!!sym(offset_var)),
+      y = sum(!!sym(y_var)),
+      .groups = "drop"
+    ) %>%
+    ungroup() %>%
+    collect() %>%
+    mutate(across(where(is.character), as.factor))
+  
+  rhs <- reformulate(x_vars)          
+  rpart_formula <- update(rhs, cbind(offset, y) ~ .)  
+  
+  fit_rpart <- rpart(
+    rpart_formula,
+    rpart_data,
+    method="poisson",
+    control = rpart.control(
+      cp = cp,
+      maxdepth = max_depth
+    )
+  )
+  
+  prune_to_depth <- function(fit, maxdepth = 3) {
+    fr <- fit$frame
+    nn <- as.numeric(row.names(fr))
+    d  <- rpart:::tree.depth(nn)  # node depth helper
+    toss <- nn[d >= maxdepth & fr$var != "<leaf>"]  # cut splits at/after depth
+    if (length(toss)) snip.rpart(fit, toss = toss) else fit
+  }
+
+  png("rpart_tree.png", width = 1400, height = 900, res = 150)  # adjust size/res as needed
+  rpart.plot(
+    prune_to_depth(fit_rpart),
+    type = 2,          # split labels on branches, leaf nodes as boxes    
+    faclen = 0,        # don’t truncate factor levels
+    cex = 0.8,         # global text size
+    tweak = 0.90,      # box size tweak,
+    digits = 3
+  )
+  dev.off()
+  
+  return(fit_rpart)
+}
+
+
+#source(AGENT_LIB)
+setwd(AGENT_WS_DIR)
+
+x_vars <- c("Gender", "Attained_Age", "Smoker_Status", "Issue_Year")
 
 # test that it can run on a parquet
-cmd_rpart(conn, "training_data", x_vars, "expdeathqx2015vbtwmi_bypol", "number_of_deaths", 3, 0.001)
+cmd_rpart(conn, "model_data_train", x_vars, "EXPDEATHQX2015VBTWMI_BYPOL", "NUMBER_OF_DEATHS", 3, 0.001)
 
 
 ```

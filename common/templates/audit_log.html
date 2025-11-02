@@ -1,0 +1,74 @@
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.6.0/css/fontawesome.min.css" integrity="sha384-NvKbDTEnL+A8F/AA5Tc5kmMLSJHUO868P+lDtTpJIeQdGYaUIuLr4lVGOEA1OcMy" crossorigin="anonymous">
+{% if sql_log %}
+<h2>SQL Log</h2>
+{% for s in sql_log %}
+<details>
+    <summary>{{s["desc"]}}</summary>
+    <pre>{{s["sql"]}}</pre>
+</details>
+{% endfor %}
+{% endif %}
+{% if cmd_log %}
+<h2>Modeling Command Audit Log</h2>
+{% for c in cmd_log %}
+{% set ent = c.entry | default({}) or {} %}
+{% set tool = ent.get("tool_name", "unknown") %}
+{% set args = ent.get("args", []) %}
+{% set success = ent.get("result", {"success" : false}).get("success", false) %}
+{%- if tool == "cmd_create_dataset" %}
+<details>    
+    <summary><i class="fa-solid fa-table"></i>Create Dataset</summary>
+    <p>
+        <div>Dataset Name: {{args[0]}}</div>
+        <pre>{{args[1]}}</pre>    
+    </p>    
+</details>
+{%- elif tool == "cmd_rpart" %}
+<details>
+    <summary><i class="fa-solid fa-magnifying-glass"></i>Experience Analysis</summary>
+    <p>
+        <ul>
+            <li>Dataset: {{args[0]}}</li>
+            <li>Variables: {{args[1] | join(',')}}</li>
+            <li>Expected Basis: {{args[2]}}</li>
+            <li>Actual Claims: {{args[3]}}</li>        
+        </ul>
+        {%- if success %}
+        <pre>{{ent["result"]["result"]}}</pre>
+        {%- else %}
+        <span>Error: {{ent.get("result", "unknown error") or "unknown error" }}</span>
+        {%- endif %}
+    </p>    
+</details>
+{%- elif tool == "cmd_glmnet" %}
+<details>
+    <summary><i class="fa-solid fa-chart-line"></i>Build Model</summary>
+    <p>
+        <ul>
+            <li>Dataset: {{args[0]}}</li>    
+            <li>Predictors: {{args[1] | join(', ')}}</li>
+            <li>Model Formula: {{args[6]}} ~ {{args[2] | join(' + ')}} + offset({{args[5]}})</li>
+            <li>Default Levels: {{ args[3] | dictsort | map('join', ' = ') | join(', ') }} </li>
+            <li>Variable Ranges: {{args[4] | join(',')}}</li>  
+        </ul>
+        {%- if success %}
+        <pre>A/E Train: {{ent["result"]["result"]["ae_train"] | round(3)}}</pre>  
+        <pre>{{ent["result"]["result"]["rpart_train"]}}</pre>
+        {%- else %}
+        <span>Error: {{ent.get("result", "unknown error") or "unknown error" }}</span>
+        {%- endif %}
+    </p>    
+</details>
+{%- elif tool == "cmd_run_inference" %}
+<details>
+    <summary><i class="fa-solid fa-gears"></i>Run Inference</summary>
+    <p>
+        <ul>
+            <li>Input Dataset: {{args[0]}}</li>    
+            <li>Output Dataset: {{args[1]}}</li>
+        </ul>        
+    </p>    
+</details>
+{%- endif %}
+{% endfor %}
+{% endif %}

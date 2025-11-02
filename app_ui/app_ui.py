@@ -10,6 +10,7 @@ import mistune
 import uvicorn
 
 from app_shared import Database, AppSession
+from audit import AuditLogRenderer
 from vwmodel import DataViewModel, AgentViewModel
 from agent import AssumptionsAgent
 from prompt import ModelingPrompt
@@ -124,11 +125,8 @@ async def agent(request: Request):
         if request.method == "POST":            
             selected_view = str(form_data["param_selected_view"]).strip()            
             if selected_view != "":
-                view_columns = avm.get_columns(selected_view)
-                col_name_idx = view_columns["cols"].index("name")
-                view_data["model_view_data_cols"] = list(map(
-                    lambda x: x[col_name_idx],
-                    view_columns["rows"]))
+                view_columns = avm.get_columns(selected_view)                
+                view_data["model_view_data_cols"] = view_columns
             
             view_data["param_selected_view"] = selected_view
             
@@ -147,8 +145,8 @@ async def start_agent(request: Request):
     qp = request.query_params
     agent_name = qp.get("agent_name", "").strip()
     model_data_view = qp.get("model_data_view", "").strip()
-    target_var = qp.get("target_var", "").strip()
-    offset_var = qp.get("offset_var", "").strip()
+    target_var = qp.get("target_var", "").strip().upper()
+    offset_var = qp.get("offset_var", "").strip().upper()    
 
     # helpers
     def get_error_json(message = "error", invalid = None):
@@ -188,16 +186,22 @@ async def start_agent(request: Request):
         avm = AgentViewModel(conn)
         cols = None
         try:
-            cols = list(
-                map(
-                    lambda x: x[1],
-                    avm.get_columns(model_data_view)["rows"]
-                )
-            )
-                
+            cols = list(map(
+                lambda c: c.upper(),
+                avm.get_columns(model_data_view)
+            ))
         except:
             return get_error_json(
                 message = f"Invalid model_data_view: '{model_data_view}', error fetching columns",
+                invalid = ["model_data_view"]
+            )
+
+        try:
+            ds_idx = cols.index("DATASET")
+            cols.pop(ds_idx)
+        except ValueError:
+            return get_error_json(
+                message = f"Column 'DATASET' must be present in '{model_data_view}', case insensitive.",
                 invalid = ["model_data_view"]
             )
 
@@ -214,7 +218,7 @@ async def start_agent(request: Request):
                 invalid = ["target_var"]
             )
 
-    predictor_cols = list(cols.difference(set([offset_var, target_var])))
+    predictor_cols = list(cols.difference(set([offset_var, target_var, "DATASET"])))
 
     # create the prompt
     modeling_prompt = ModelingPrompt(
@@ -224,13 +228,13 @@ async def start_agent(request: Request):
         offset_var=offset_var
     )
     
+
     # create an assumptions agent
     assump_agent = AssumptionsAgent()
     agent_response = await assump_agent.prompt_async(
         agent_name,
         str(modeling_prompt)
-    )
-
+    )        
     # save the response markdown + html
     work_dir = None
     with Database.get_session_conn() as conn:
@@ -244,7 +248,13 @@ async def start_agent(request: Request):
     md_render = mistune.create_markdown()
     agent_response_html = md_render(agent_response)
     with open(work_dir / "response.html", "w") as fh:
-        fh.write(agent_response_html)    
+        fh.write(agent_response_html)
+
+    # prepare the audit log
+    audit_render = AuditLogRenderer(work_dir)
+    audit_response_html = audit_render.render()
+    with open(work_dir / "audit.html", "w") as fh:
+        fh.write(audit_response_html)
 
     return JSONResponse({
         "agent_name": agent_name,
@@ -252,21 +262,20 @@ async def start_agent(request: Request):
         "model_data_view": model_data_view,
         "target_var": target_var,
         "offset_var": offset_var,
-        "response" : agent_response_html
+        "agent_response" : agent_response_html,
+        "audit_log" : audit_response_html
     })
 
-async def poll_agent(request: Request):
-    pass
 
 routes = [
     Route("/", data, methods=["GET", "POST"]),
     Route("/data", data, methods=["GET", "POST"]),
     Route("/agent", agent, methods=["GET", "POST"]),
-    Route("/start_agent", start_agent, methods=["GET"]),
-    Route("/poll_agent", poll_agent, methods=["GET"]),
+    Route("/start_agent", start_agent, methods=["GET"]),    
     Route("/agent_response", agent_response, methods=["GET"]),
     Route("/audit", audit, methods=["GET", "POST"]),
     Mount("/static", app=StaticFiles(directory="static"), name="static"),
+    Mount("/img", app=StaticFiles(directory="img"), name="img")
 ]
 
 app = Starlette(debug=True, routes=routes)

@@ -4,6 +4,7 @@ library(recipes)
 library(butcher)
 library(carrier)
 library(rpart)
+library(rpart.plot)
 library(rsample)
 library(arrow)
 library(splines)
@@ -95,7 +96,7 @@ cmd_run_inference <- function(conn, dataset_in, dataset_out) {
 # conn is setup automatically, and is a connection to a DuckDB database, 
 # builds a poisson decision tree
 cmd_rpart <- function(conn, dataset, x_vars, offset_var, y_var, max_depth, cp) {
-
+  
   # check if the dataset is a parquet file
   pq_filename <- sprintf("%s.parquet", dataset)
   if (file.exists(pq_filename)) {
@@ -128,6 +129,25 @@ cmd_rpart <- function(conn, dataset, x_vars, offset_var, y_var, max_depth, cp) {
       maxdepth = max_depth
     )
   )
+  
+  prune_to_depth <- function(fit, maxdepth = 3) {
+    fr <- fit$frame
+    nn <- as.numeric(row.names(fr))
+    d  <- rpart:::tree.depth(nn)  # node depth helper
+    toss <- nn[d >= maxdepth & fr$var != "<leaf>"]  # cut splits at/after depth
+    if (length(toss)) snip.rpart(fit, toss = toss) else fit
+  }
+  
+  png("rpart_tree.png", width = 1400, height = 900, res = 150)  # adjust size/res as needed
+  rpart.plot(
+    prune_to_depth(fit_rpart),
+    type = 2,          # split labels on branches, leaf nodes as boxes    
+    faclen = 0,        # don’t truncate factor levels
+    cex = 0.8,         # global text size
+    tweak = 0.90,      # box size tweak,
+    digits = 3
+  )
+  dev.off()
   
   return(fit_rpart)
 }
@@ -289,7 +309,7 @@ cmd_glmnet <- function(conn, dataset, x_vars, design_matrix_vars, factor_vars_le
   best_lambda <- fit_glmnet$lambda[best_lambda_idx]
   
   # bundle up model into carrier crate
-  run_model <- carrier::crate(function(df, use_offset = T) {
+  run_model <- carrier::crate(function(df, use_offset = T, pred_type="response") {
       
       df_prepped <- recipes::bake(prep_glmnet_data, df)
       X_mat <- stats::model.matrix(dmat_formula, df_prepped)
@@ -300,14 +320,14 @@ cmd_glmnet <- function(conn, dataset, x_vars, design_matrix_vars, factor_vars_le
           X_mat,
           newoffset = log(df[[offset_var]]),
           s = best_lambda,
-          type = "response"
+          type = pred_type
         )
       } else {
         pred_vec <- stats::predict(
           fit_glmnet,
           X_mat,
           s = best_lambda,
-          type = "response"
+          type = pred_type
         )
       }
       return(as.double(pred_vec))
@@ -317,8 +337,17 @@ cmd_glmnet <- function(conn, dataset, x_vars, design_matrix_vars, factor_vars_le
     fit_glmnet = fit_glmnet,
     offset_var = offset_var,
     dmat_formula = dmat_formula,
-    best_lambda = best_lambda,
-    lambda_strat = lambda_strat
+    best_lambda = best_lambda,    
+    args = list(
+      "dataset" = dataset, 
+      "x_vars" = x_vars, 
+      "design_matrix_vars" = design_matrix_vars, 
+      "factor_vars_levels" = factor_vars_levels, 
+      "num_var_clip" = num_var_clip, 
+      "offset_var" = offset_var, 
+      "y_var" = y_var, 
+      "lambda_strat" = lambda_strat
+    )
   )
   
   # rename offset column back to original
