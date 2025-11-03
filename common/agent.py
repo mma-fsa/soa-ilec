@@ -35,6 +35,7 @@ class AssumptionsAgent:
         with Database.get_session_conn() as conn:
             app_session = AppSession(conn)
             app_session["AGENT_NAME"] = agent_name
+            app_session["AGENT_LAST_ACTION"] = "Agent Running..."
             work_dir_path = Path(DEFAULT_AGENT_WORK_DIR) / Path(agent_name + "/")
             if not work_dir_path.exists():
                 work_dir_path.mkdir(parents=True, exist_ok=True)

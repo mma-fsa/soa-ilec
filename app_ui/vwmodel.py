@@ -1,4 +1,6 @@
+from urllib.parse import quote
 from app_shared import Database
+from audit import AuditLogReader
 from env_vars import DEFAULT_DATA_EXPORT_DIR, DEFAULT_AGENT_WORK_DIR
 import uuid, json
 import pandas as pd
@@ -143,7 +145,76 @@ class AgentViewModel:
 
         agent_dir = Path(DEFAULT_AGENT_WORK_DIR) / agent_name
 
+        # get the modeling params
+        agent_params = None
+        with open(agent_dir / "agent_params.json", "r") as fh:
+            agent_params = json.load(fh)        
+        
+        # get the modeling log
         final_data = None
         with open(agent_dir / "final.json", "r") as fh:
             final_data = json.load(fh)
         
+        # get the response html
+        response_html = None
+        with open(agent_dir / "response.html") as fh:
+            response_html = fh.read()
+        
+        # get the audit log html
+        audit_log_html = None
+        with open(agent_dir / "audit.html") as fh:
+            audit_log_html = fh.read()
+        
+        # scan the modeling log and create a query to access the model results
+        final_model_log = final_data["final_model_log"]
+
+        # run a BFS to look for cmd_run_inference
+        bfs_work = [final_model_log]
+
+        # this holds the cmd_run_inference commands
+        cmd_run_inference = []
+        while len(bfs_work) > 0:
+
+            curr_node = bfs_work.pop(0)
+            if curr_node["type"] == AuditLogReader.NODE_TYPE_CHILD:
+                tool_name = curr_node["entry"].get("tool_name", "")
+                if tool_name == "cmd_run_inference":
+                    _, out_name = curr_node["entry"]["args"]
+                    cmd_run_inference.append(out_name)
+
+            if curr_node["next"] is not None:
+                bfs_work.append(curr_node["next"])
+
+        # check parquet paths
+        final_workspace_id = final_data["workspace_id"]
+        final_workspace_dir = agent_dir / f"workspace_{final_workspace_id}"
+
+        # create sql to read the model predictions
+        sql_parts = []
+        for ds in cmd_run_inference:
+            pq_path = final_workspace_dir / f"{ds}.parquet"
+            if not pq_path.exists():
+                raise Exception(f"{pq_path} does not exist")
+            inner_qry = f"""select * from read_parquet('{pq_path}')"""
+            sql_parts.append(f"{ds} as ({inner_qry})")
+        
+        final_sql = "with " + ",".join(sql_parts) + f"select * from {cmd_run_inference[0]}"        
+
+        agent_name_safe = quote(agent_name, safe="")
+
+        # create links to exportable items
+        artifact_links = {
+            "model_factors" : quote(f"/export/{agent_name_safe}/model_factors", safe="/"),
+            "agent_response" : quote(f"/export/{agent_name_safe}/agent_response", safe="/"),
+            "audit_response" : quote(f"/export/{agent_name_safe}/audit_response", safe="/"),
+            "model_pred" : "/data?q=" + quote(final_sql, safe="")
+        }
+
+        return {
+            "agent_params" : agent_params,
+            "agent_response" : response_html,
+            "audit_response" : audit_log_html,
+            "artifact_links" : artifact_links
+        }
+
+

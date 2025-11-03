@@ -4,6 +4,19 @@
 {% block head %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codemirror/theme-one-dark@6.2.0/theme-one-dark.css" />
 <style>
+
+  .export-data {
+    padding-top: 5px;
+  }
+
+  .export-data a {
+    margin-left: 25px;
+  }
+  
+  .export-data a:first-child {
+    margin-left: 5px;
+  }
+
   .split-wrap {
     display: flex;
     flex-direction: column;
@@ -81,8 +94,8 @@
       <div class="card-body d-flex flex-column">
         <h1 class="h5 mb-3">
           <div class="small" style="float: right">
-            <label class="form-label small">Previous Agents:</label>
-            <form method="post" class="mx-auto" style="max-width: 640px;">
+            <label class="form-label small">Previous Agents</label>
+            <form method="get" class="mx-auto" style="max-width: 640px;">
               <select name="param_load_agent" style="max-width: 200px;" onchange="this.form.requestSubmit()">
                 <option value="">...</option>
                 {%- for m in view_data["previous_agents"] %}
@@ -117,7 +130,7 @@
                     <select class="form-select" id="target_variable" name="target_variable">
                       <option value="" disabled selected>Choose…</option>
                       {% for col in view_data["model_view_data_cols"] %}
-                      <option value="{{ col }}">{{ col }}</option>
+                      <option value="{{ col }}" {{ "selected" if (view_data["param_selected_target"] | upper()) ==(col | upper() ) else "" }}>{{ col }}</option>
                       {% endfor %}
                     </select>
                     <div class="form-text">Outcome you intend to predict.</div>
@@ -128,7 +141,7 @@
                   <select class="form-select" id="offset_col" name="offset_col">
                     <option value="" disabled selected>Choose…</option>
                     {% for col in view_data["model_view_data_cols"] %}
-                    <option value="{{ col }}">{{ col }}</option>
+                    <option value="{{ col }}" {{ "selected" if (view_data["param_selected_offset"] | upper()) == (col | upper()) else "" }}>{{ col }}</option>
                     {% endfor %}
                   </select>
                   <div class="form-text">Either an expected basis or exposure column</div>
@@ -139,8 +152,9 @@
 
         <div class="d-flex align-items-center gap-2 mt-3">
           <button id="run-agent" class="btn btn-primary">Run Agent</button>
+          <button id="reset-agent" class="btn"><i class="fa-solid fa-xmark"></i> Clear All</button>
           <span id="hint_readonly_checked" class="text-muted ms-auto small">
-            <code>Agent Name:</code> <input id="param_agent_name" type="textbox" name="run_name">
+            <code>Agent Name:</code> <input id="param_agent_name" type="textbox" name="run_name" value="{{view_data["param_agent_name"]}}">
           </span>
         </div>
       </div>
@@ -152,7 +166,7 @@
       <div class="card-body d-flex flex-column">
         <div class="results-meta">
           <h2 class="h6 m-0">Agent Response</h2>
-          <span id="elapsed" class="badge bg-success agent-done">Agent Finished</span>
+          <span id="elapsed" class="badge bg-success agent-done" style="{{"display: block;" if view_data["param_agent_name"] != "" else ""}}">Agent Finished</span>
           <span id="error" class="badge bg-warning text-dark agent-running">Running...</span>
         </div>
         <div id="results" class="results-body">
@@ -161,13 +175,13 @@
             <li class="nav-item" role="presentation">
               <button class="nav-link active" id="agent-tab" data-bs-toggle="tab" data-bs-target="#agent" type="button"
                 role="tab" aria-controls="agent" aria-selected="true">
-                Agent Response
+                <i class="fa-solid fa-file"></i> Agent Response
               </button>
             </li>
             <li class="nav-item" role="presentation">
               <button class="nav-link" id="audit-tab" data-bs-toggle="tab" data-bs-target="#audit" type="button"
                 role="tab" aria-controls="audit" aria-selected="false">
-                Modeling Log
+                <i class="fa-solid fa-magnifying-glass"></i> Modeling Log
               </button>
             </li>
           </ul>
@@ -176,28 +190,34 @@
           <div class="tab-content border border-top-0 p-3" id="demoTabsContent">
             <div class="tab-pane fade show active" id="agent" role="tabpanel" aria-labelledby="agent-tab">
               <p class="agent-running">
-                <img src="img/loading.gif"> Agent Running...
+                <img src="img/loading.gif"> <span class="agent-poll">Agent Running...</span>
               </p>
               <div id="agent-response">
-
+                {{view_data["agent_response"]}}
               </div>
             </div>
             <div class="tab-pane fade" id="audit" role="tabpanel" aria-labelledby="audit-tab">
               <p class="agent-running">
-                <img src="img/loading.gif"> Agent Running...
+                <img src="img/loading.gif"> <span class="agent-poll">Agent Running...</span>
               </p>
               <div id="audit-response">
-
+                {{view_data["audit_response"]}}
               </div>
             </div>
           </div>
 
         </div>
-        <details class="mt-2">
+        {%- if load_agent_data %}
+        <details id="export-details" class="mt-2" open>          
           <summary class="small text-muted">Export</summary>
-          <a href="#">Markdown</a>
-          <a href="#">HTML</a>
+          <div class="export-data">
+            <a href="{{view_data["link_model_factors"]}}"><i class="fa-solid fa-file-excel"></i> Model Factors</a>
+            <a href="{{view_data["link_model_pred"]}}"><i class="fa-solid fa-database"></i> Model Predictions</a>
+            <a href="{{view_data["link_agent_response"]}}"><i class="fa-solid fa-file"></i> Agent Response</a>
+            <a href="{{view_data["link_audit_response"]}}"><i class="fa-solid fa-magnifying-glass"></i> Modeling Log</a>            
+          </div>          
         </details>
+        {%- endif %}
       </div>
     </div>
   </div>
@@ -206,8 +226,16 @@
 
 {% block scripts %}
 <script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
-
 <script>
+
+  $("#reset-agent").click(function (e) {
+    e.preventDefault();
+    var origin = window.location.origin;
+    var path   = window.location.pathname;    
+    // Replace current history entry (no extra Back step):
+    window.location.replace(origin + path);
+  });
+
   $("#run-agent").click(function (e) {
     e.preventDefault();
 
@@ -224,6 +252,41 @@
     $("#agent-response").html("");
     $("#audit-response").html("");
 
+    var poll_timer = null;
+    
+    function start_polling() {
+      var is_waiting = false;
+      poll_timer = setInterval(function(){
+        if (is_waiting || poll_timer == null) {
+          return
+        }
+        else {
+          is_waiting = true;
+        }
+        $.ajax({
+          url: "/poll_agent",
+          type: "GET",
+          dataType: "json",
+          data: {},
+          success: function (response) {
+            is_waiting = false
+            $(".agent-poll").text(response["last_event"])
+          },
+          error: function (xhr, status, error) {
+            is_waiting = false
+            $(".agent-poll").text("Error getting agent action...")
+          }
+        })
+      }, 500)
+    }
+
+    function stop_polling() {
+      clearInterval(poll_timer)
+      poll_timer = null;
+    }
+
+    $("#export-details").hide()
+
     // Fire GET request
     $.ajax({
       url: "/start_agent",
@@ -236,16 +299,26 @@
         "offset_var": offset_col
       },
       success: function (response) {
-        // Update the response divs
-        $("#agent-response").html(response.agent_response);
-        $("#audit-response").html(response.audit_log);
+        stop_polling();
+        // redirect construct the new URL
+        const url = new URL(window.location.href);
+        url.searchParams.set("agent_name", encodeURIComponent(agent_name));
 
-        // Hide running indicators, show done indicators
-        $(".agent-running").hide();
-        $(".agent-done").show();
-        $("#run-agent").prop("disabled", false);
+        // redirect
+        window.location.href = url.toString();
+
+        // Update the response divs
+        // $("#agent-response").html(response.agent_response);
+        // $("#audit-response").html(response.audit_log);
+
+        // // Hide running indicators, show done indicators
+        // $(".agent-running").hide();
+        // $(".agent-done").show();
+        // $("#run-agent").prop("disabled", false);
+
       },
       error: function (xhr, status, error) {
+        stop_polling();
         try {
           message = xhr.responseJSON["message"]
         } catch(e) {
@@ -256,6 +329,10 @@
         $("#run-agent").prop("disabled", false);
       }
     });
+
+    // start polling for progress updates
+    start_polling();
+
   });
 </script>
 

@@ -6,6 +6,7 @@ from pathlib import Path
 from collections import defaultdict, deque
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from env_vars import COMMON_TEMPLATE_DIR
+from urllib.parse import quote
 
 PTR_PATTERN = re.compile(r'^"([A-Za-z0-9-]+)"->"([A-Za-z0-9-]+)"$')
 
@@ -286,6 +287,7 @@ class AuditLogRenderer:
         if not self.mcp_work_dir.exists():
             raise FileNotFoundError(f"{mcp_work_dir} does not exist")
         
+        self.agent_name = self.mcp_work_dir.name
         self.audit_log_data = self.mcp_work_dir / "final.json"
 
         if not self.audit_log_data.exists():
@@ -304,8 +306,10 @@ class AuditLogRenderer:
             autoescape=select_autoescape(["html", "xml"])
         )        
         audit_template = env.get_template("audit_log.html")        
-        
+        safe_agent_name = quote(self.agent_name, safe="")
+
         return audit_template.render(
+            agent_name = safe_agent_name,
             sql_log = sql_log,
             cmd_log = full_cmd_log_by_time
         )

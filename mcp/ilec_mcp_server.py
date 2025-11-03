@@ -47,11 +47,21 @@ def create_REnv(workspace_id, no_cmd=False):
             no_cmd=no_cmd
         )
 
+# ---- used to show the user what the agent is doing in real-time
+def log_mcp_event(event_name):
+    
+    with Database.get_session_conn() as con:
+        session = AppSession(con)
+        session["AGENT_LAST_ACTION"] = str(event_name)
+
+
 # ---- MCP server + tools ----
 mcp = FastMCP("ilec")
 
 @mcp.tool(description=SQL_SCHEMA_DESC)
 def sql_schema(table_name : str, ctx: Context) -> Dict[str, Any]:
+
+    log_mcp_event(f"Getting schema for {table_name}")
 
     # CAUTION: PRAMGA's don't support prepared statements,
     # doing the best we can with regexp
@@ -80,6 +90,8 @@ def sql_schema(table_name : str, ctx: Context) -> Dict[str, Any]:
 
 @mcp.tool(description=SQL_RUN_DESC)
 def sql_run(desc : str, sql: str, ctx: Context) -> Dict[str, Any]:
+
+    log_mcp_event(f"Running sql query: {desc}")
 
     DUCKDB_SELECT_STMT = re.compile(r'(?is)^\s*select\b[^;]*\blimit\s+\d+\s*(?:offset\s+\d+\s*)?;?\s*$')
 
@@ -143,6 +155,7 @@ def sql_run(desc : str, sql: str, ctx: Context) -> Dict[str, Any]:
     
 @mcp.tool(description=CMD_INIT_DESC)
 def cmd_init() -> Dict[str, Any]:
+    log_mcp_event("Starting modeling process...")    
     workspace_id = None
     renv = create_REnv(None, no_cmd=True)
     with renv:
@@ -156,6 +169,8 @@ def cmd_init() -> Dict[str, Any]:
 
 @mcp.tool(description=CMD_CREATE_DATASET_DESC)
 def cmd_create_dataset(workspace_id, dataset_name, sql) -> Dict[str, Any]:    
+
+    log_mcp_event(f"Creating modeling dataset: {dataset_name}")
 
     # can select without a limit   
     DUCKDB_SELECT_STMT = re.compile(r'(?is)^\s*select\b.*;?\s*$')
@@ -184,6 +199,9 @@ def cmd_create_dataset(workspace_id, dataset_name, sql) -> Dict[str, Any]:
 
 @mcp.tool(description=CMD_RUN_INFERENCE_DESC)
 def cmd_run_inference(workspace_id, dataset_in, dataset_out) -> Dict[str, Any]:
+
+    log_mcp_event(f"Running model on {dataset_in}, saving results in {dataset_out}")
+
     r_env = create_REnv(workspace_id)
     new_workspace_id = r_env.workspace_id
     dataset_res = RCmd.run_command(
@@ -203,6 +221,9 @@ def cmd_run_inference(workspace_id, dataset_in, dataset_out) -> Dict[str, Any]:
 @mcp.tool(description=CMD_RPART_DESC)
 def cmd_rpart(workspace_id: str, dataset: str, x_vars: List[str], offset: str, y_var: str, max_depth : int, cp : float, ctx: Context) -> Dict[str, Any]:    
     
+    x_var_str = ", ".join(x_vars)
+    log_mcp_event(f"Running experience analysis using {x_var_str}.")
+
     r_env = create_REnv(workspace_id)
     new_workspace_id = r_env.workspace_id
 
@@ -244,6 +265,9 @@ def cmd_rpart(workspace_id: str, dataset: str, x_vars: List[str], offset: str, y
 def cmd_glmnet(workspace_id, dataset : str, x_vars : List[str], design_matrix_vars : List[str], \
               factor_vars_levels: dict, num_var_clip : dict, offset_var : str, y_var : str, lambda_strat : str):
     
+    formula_str = y_var + f" ~ offset({offset_var}) + " + ("+".join(design_matrix_vars))
+    log_mcp_event(f"Fitting GLM on {dataset}: {formula_str}")
+
     r_env = create_REnv(workspace_id)
     new_workspace_id = r_env.workspace_id
     dataset_res = RCmd.run_command(
@@ -269,6 +293,8 @@ def cmd_glmnet(workspace_id, dataset : str, x_vars : List[str], design_matrix_va
 @mcp.tool(description=CMD_FINALIZE_DESC)
 def cmd_finalize(workspace_id) -> Dict[str , Any]:
         
+    log_mcp_event(f"Finalizing Model")
+
     workspace_dir = None
     with Database.get_session_conn() as con:
         session = AppSession(con)

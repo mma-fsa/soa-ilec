@@ -1,4 +1,4 @@
-import os, re, json
+import os, re, json, base64, mimetypes
 from starlette.applications import Starlette
 from starlette.responses import HTMLResponse, FileResponse, JSONResponse, PlainTextResponse
 from starlette.requests import Request
@@ -15,6 +15,8 @@ from vwmodel import DataViewModel, AgentViewModel
 from agent import AssumptionsAgent
 from prompt import ModelingPrompt
 from pathlib import Path
+
+from env_vars import DEFAULT_AGENT_WORK_DIR
 
 # --- Config ---
 MCP_URL = os.environ.get("MCP_URL", "http://127.0.0.1:9090/mcp")
@@ -51,7 +53,12 @@ async def data(request: Request):
             "query_message" : "Run a query to see results here.",
             "query" : "SELECT * FROM ILEC_DATA LIMIT 50;"
         }
-                        
+
+        clear_q = False
+        if "q" in request.query_params:
+            view_data["query"] = sqlglot.transpile(request.query_params["q"], read="duckdb", write="duckdb", pretty=True)[0]                                    
+            clear_q = True
+        
         if request.method == "POST":     
             if "run_query" in form_data.keys():
                 query = form_data["query"]
@@ -101,7 +108,8 @@ async def data(request: Request):
     return render(
         "data.html", 
         view_data = view_data,
-        query_results = query_results
+        query_results = query_results,
+        clear_q = clear_q
     )
 
 async def agent(request: Request):
@@ -120,27 +128,143 @@ async def agent(request: Request):
             "param_selected_view" : "",
             "param_selected_target" : "",
             "param_selected_offset" : "",
+            "param_agent_name" : "",            
             "previous_agents" : avm.get_previous_agents()
         }
+
+        agent_data = {}
+        load_agent_data = False
+
+        if "param_load_agent" in request.query_params:
+            load_agent_data = True            
+            
+            agent_name = request.query_params["param_load_agent"]
+            view_data["param_agent_name"] = agent_name
+
+            # load the previous agent data
+            agent_data = avm.get_agent_data(agent_name)
+            
+            # set agent parameters
+            agent_params = agent_data["agent_params"]            
+            selected_view = agent_params["model_data_vw"]
+            view_data["model_view_data_cols"] = avm.get_columns(selected_view)            
+            view_data["param_selected_view"] = selected_view
+            view_data["param_selected_target"] = agent_params["target_var"]
+            view_data["param_selected_offset"] = agent_params["offset_var"]
+
+            # set agent response
+            view_data["agent_response"] = agent_data["agent_response"]
+            view_data["audit_response"] = agent_data["audit_response"]
+            
+            artifact_links = agent_data["artifact_links"]            
+            view_data["link_model_factors"] = artifact_links["model_factors"]
+            view_data["link_agent_response"] = artifact_links["agent_response"]
+            view_data["link_audit_response"] = artifact_links["audit_response"]
+            view_data["link_model_pred"] = artifact_links["model_pred"]
+
+        if request.method == "POST":
+            selected_view = str(form_data["param_selected_view"]).strip()            
+            if selected_view != "":
+                view_columns = avm.get_columns(selected_view)                
+                view_data["model_view_data_cols"] = view_columns
         
-        if request.method == "POST":                        
-            if "param_load_agent" in form_data.keys():
-                avm.load_previous_agent(form_data["param_load_agent"])
-            else:
-                selected_view = str(form_data["param_selected_view"]).strip()            
-                if selected_view != "":
-                    view_columns = avm.get_columns(selected_view)                
-                    view_data["model_view_data_cols"] = view_columns
-            
-                view_data["param_selected_view"] = selected_view
-            
-    return render("agent.html", view_data=view_data)
+            view_data["param_selected_view"] = selected_view
+        
+    return render(
+        "agent.html", 
+        load_agent_data=load_agent_data,
+        view_data=view_data)
 
 async def audit(request: Request):
     return render("audit.html", title="ILEC Agent Interface")
 
 async def agent_response(request: Request):
     return render("audit.html", title="ILEC Agent Interface")
+
+async def plots(request):
+    
+    agent_name = request.path_params["agent_name"]
+    workspace_id = request.path_params["workspace_id"]
+    
+    workdir_path = Path(DEFAULT_AGENT_WORK_DIR) / agent_name
+
+    if not workdir_path.exists():
+        return PlainTextResponse(f"'{agent_name}' does not exist", status_code=400)
+    
+    plot_dir_path = workdir_path / "plots"
+
+    if not plot_dir_path.exists():
+        return PlainTextResponse(f"'{agent_name}' does not have any plots.", status_code=400)
+
+    plot_path = plot_dir_path / f"{workspace_id}.png"
+
+    if not plot_path.exists():
+        return PlainTextResponse(f"'{plot_path}' does not exist.", status_code=400)
+    
+    mime, _ = mimetypes.guess_type(str(plot_path))
+    mime = mime or "application/octet-stream"
+    
+    img_bytes = plot_path.read_bytes()
+    b64 = base64.b64encode(img_bytes).decode("ascii")
+    data_uri = f"data:{mime};base64,{b64}"
+
+    return render("plot.html", data_uri=data_uri, agent=agent_name, wid = workspace_id)
+
+async def export_artifact(request):
+
+    allowed_artifacts = {
+        "model_factors": "model_factors.xlsx",
+        "agent_response": "response.md",
+        "audit_response": "audit.html",
+    }
+
+    agent_name = request.path_params["agent_name"]
+    artifact_name_raw: str = request.path_params["artifact_name"]
+    artifact_key = (artifact_name_raw or "").lower().strip()
+
+    # Validate artifact key
+    if artifact_key not in allowed_artifacts:
+        return PlainTextResponse(f"'{artifact_name_raw}' is not a valid artifact.", status_code=400)
+
+    # Resolve path
+    filename = allowed_artifacts[artifact_key]
+    artifact_path = (Path(DEFAULT_AGENT_WORK_DIR) / agent_name / filename).resolve()
+
+    # Ensure the resolved path is within the agents work dir
+    base_dir = Path(DEFAULT_AGENT_WORK_DIR).resolve()
+    try:
+        artifact_path.relative_to(base_dir)
+    except ValueError:
+        return PlainTextResponse("invalid path resolution", status_code=400)
+
+    # Check existence
+    if not artifact_path.is_file():
+        return PlainTextResponse("artifact not found", status_code=404)
+
+    # Guess content type (override a couple common ones)
+    mime, _ = mimetypes.guess_type(str(artifact_path))
+    if not mime:
+        # sensible defaults
+        if artifact_path.suffix.lower() == ".md":
+            mime = "text/markdown; charset=utf-8"
+        elif artifact_path.suffix.lower() == ".xlsx":
+            mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        else:
+            mime = "application/octet-stream"
+
+    # Nice download name (include agent prefix)
+    download_name = f"{agent_name}-{filename}"
+
+    # Send as an attachment; disable caching if these are sensitive
+    headers = {"Cache-Control": "no-store"}
+
+    return FileResponse(
+        path=str(artifact_path),
+        media_type=mime,
+        filename=download_name,                   # Starlette >= 0.27
+        content_disposition_type="attachment",
+        headers=headers,
+    )
 
 # --- Routes for js async (XmlHttpRequest) ---
 async def start_agent(request: Request):
@@ -183,8 +307,15 @@ async def start_agent(request: Request):
         return get_error_json(
             message = f"Invalid agent_name: '{agent_name}'",
             invalid = ["agent_name"]
-        )
+        )    
     
+    # check if already exists
+    if (Path(DEFAULT_AGENT_WORK_DIR) / agent_name).exists():
+        return get_error_json(
+            message = f"Agent already exists: '{agent_name}'. Choose a different name.",
+            invalid = ["agent_name"]
+        )
+
     cols = None
     with Database.get_duckdb_conn() as conn:
         avm = AgentViewModel(conn)
@@ -232,15 +363,13 @@ async def start_agent(request: Request):
         offset_var=offset_var
     )
         
-
     # create an assumptions agent
     assump_agent = AssumptionsAgent()
     agent_response = await assump_agent.prompt_async(
         agent_name,
         str(modeling_prompt)
     )        
-    
-    
+        
     # save the response markdown + html
     work_dir = None
     with Database.get_session_conn() as conn:
@@ -283,27 +412,28 @@ async def start_agent(request: Request):
         "audit_log" : audit_response_html
     })
 
-GUID_RE = re.compile(r"^[0-9a-fA-F-]{8,}$")
+async def poll_agent(request: Request):
+    
+    last_event = "<none>"
+    with Database.get_session_conn() as conn:
+        last_event = AppSession(conn)["AGENT_LAST_ACTION"]
 
-async def plots(request):
-    agent_name = request.path_params["agent_name"]
-    session_id = request.path_params["session_id"]
+    return JSONResponse({
+        "last_event" : last_event
+    })
 
-    # (Optional) validate / normalize
-    if not GUID_RE.match(session_id):
-        return PlainTextResponse("invalid session_id", status_code=400)
-
-    # do your thing (e.g., locate plot files, query, etc.)
-    return JSONResponse({"agent_name": agent_name, "session_id": session_id})
+# --- Configure server routes ---
 
 routes = [
     Route("/", data, methods=["GET", "POST"]),
     Route("/data", data, methods=["GET", "POST"]),
     Route("/agent", agent, methods=["GET", "POST"]),
     Route("/start_agent", start_agent, methods=["GET"]),    
+    Route("/poll_agent", poll_agent, methods=["GET"]),
     Route("/agent_response", agent_response, methods=["GET"]),
     Route("/audit", audit, methods=["GET", "POST"]),
-    Route("/plots/{agent_name}/{session_id}", endpoint=plots, methods=["GET"]),
+    Route("/plots/{agent_name}/{workspace_id}", endpoint=plots, methods=["GET"]),
+    Route("/export/{agent_name}/{artifact_name}", endpoint=export_artifact, methods=["GET"]),
     Mount("/static", app=StaticFiles(directory="static"), name="static"),
     Mount("/img", app=StaticFiles(directory="img"), name="img")
 ]

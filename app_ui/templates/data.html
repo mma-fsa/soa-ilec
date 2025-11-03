@@ -158,6 +158,14 @@
 {% endblock %}
 
 {% block scripts %}
+{% if clear_q %}
+<script>
+  // Remove ?q=... without reloading, after POST
+  if (location.search.includes("q=")) {
+    history.replaceState(null, "", location.pathname);
+  }
+</script>
+{% endif %}
 <script>  
   function run_export(export_type) {
 

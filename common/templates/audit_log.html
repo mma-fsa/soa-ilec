@@ -11,6 +11,7 @@
 {% if cmd_log %}
 <h2>Modeling Command Audit Log</h2>
 {% for c in cmd_log %}
+{% set workspace_id = c.workspace_id %}
 {% set ent = c.entry | default({}) or {} %}
 {% set tool = ent.get("tool_name", "unknown") %}
 {% set args = ent.get("args", []) %}
@@ -34,6 +35,7 @@
             <li>Actual Claims: {{args[3]}}</li>        
         </ul>
         {%- if success %}
+        <a href="/plots/{{agent_name}}/{{workspace_id}}" target="_blank">View Plot</a>
         <pre>{{ent["result"]["result"]}}</pre>
         {%- else %}
         <span>Error: {{ent.get("result", "unknown error") or "unknown error" }}</span>

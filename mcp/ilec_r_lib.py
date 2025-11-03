@@ -11,11 +11,10 @@ import os
 import sys
 
 from audit import AuditLogEntry
-from env_vars import AGENT_R_LIB, DEFAULT_DDB_PATH, EXPORT_R_LIB, DEFAULT_AGENT_WORK_DIR
+from env_vars import AGENT_R_LIB, DEFAULT_DDB_PATH, EXPORT_R_LIB, DEFAULT_AGENT_WORK_DIR, R_TMP_DIR
 
-R_TMP_DIR = Path(DEFAULT_AGENT_WORK_DIR) / "r_tmp"
-R_TMP_DIR.mkdir(exist_ok=True, parents=True)
-os.environ["TMPDIR"] = str(R_TMP_DIR)
+Path(R_TMP_DIR).mkdir(exist_ok=True, parents=True)
+os.environ["TMPDIR"] = str(Path(R_TMP_DIR))
 
 logging.basicConfig(level=logging.INFO)
 

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plot · {{agent}} · {{sid}}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { margin: 0; padding: 1rem; font-family: system-ui, sans-serif; background:#111; color:#eee; }
+    .wrap { display:flex; justify-content:center; }
+    img { max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 6px 24px rgba(0,0,0,.35); }
+    .meta { opacity:.8; font-size:.875rem; margin-bottom:.75rem; }
+  </style>
+</head>
+<body>
+  <div class="meta">Agent: <code>{{agent}}</code> · Workspace: <code>{{wid}}</code></div>
+  <div class="wrap">
+    <img src="{{data_uri}}">
+  </div>
+</body>
+</html>
