@@ -1,4 +1,4 @@
-import os, re
+import os, re, json
 from starlette.applications import Starlette
 from starlette.responses import HTMLResponse, FileResponse, JSONResponse, PlainTextResponse
 from starlette.requests import Request
@@ -119,16 +119,20 @@ async def agent(request: Request):
             "model_view_data_cols" : [],
             "param_selected_view" : "",
             "param_selected_target" : "",
-            "param_selected_offset" : ""
+            "param_selected_offset" : "",
+            "previous_agents" : avm.get_previous_agents()
         }
         
-        if request.method == "POST":            
-            selected_view = str(form_data["param_selected_view"]).strip()            
-            if selected_view != "":
-                view_columns = avm.get_columns(selected_view)                
-                view_data["model_view_data_cols"] = view_columns
+        if request.method == "POST":                        
+            if "param_load_agent" in form_data.keys():
+                avm.load_previous_agent(form_data["param_load_agent"])
+            else:
+                selected_view = str(form_data["param_selected_view"]).strip()            
+                if selected_view != "":
+                    view_columns = avm.get_columns(selected_view)                
+                    view_data["model_view_data_cols"] = view_columns
             
-            view_data["param_selected_view"] = selected_view
+                view_data["param_selected_view"] = selected_view
             
     return render("agent.html", view_data=view_data)
 
@@ -227,7 +231,7 @@ async def start_agent(request: Request):
         target_var=target_var,
         offset_var=offset_var
     )
-    
+        
 
     # create an assumptions agent
     assump_agent = AssumptionsAgent()
@@ -235,6 +239,8 @@ async def start_agent(request: Request):
         agent_name,
         str(modeling_prompt)
     )        
+    
+    
     # save the response markdown + html
     work_dir = None
     with Database.get_session_conn() as conn:
@@ -249,6 +255,17 @@ async def start_agent(request: Request):
     agent_response_html = md_render(agent_response)
     with open(work_dir / "response.html", "w") as fh:
         fh.write(agent_response_html)
+
+    # write the agent parameters
+    agent_params = {
+        "model_data_vw" : model_data_view,
+        "predictors" : predictor_cols,
+        "target_var" : target_var,
+        "offset_var" : offset_var,
+        "prompt" : str(modeling_prompt)
+    }    
+    with open(work_dir / "agent_params.json", "w") as fh:
+        json.dump(agent_params, fh)
 
     # prepare the audit log
     audit_render = AuditLogRenderer(work_dir)

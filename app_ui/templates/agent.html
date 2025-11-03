@@ -82,11 +82,14 @@
         <h1 class="h5 mb-3">
           <div class="small" style="float: right">
             <label class="form-label small">Previous Agents:</label>
-            <select style="max-width: 200px;">
-              <option>...</option>
-              <option>UL_MODEL_DATA</option>
-              <option>ILEC_DATA</option>
-            </select>
+            <form method="post" class="mx-auto" style="max-width: 640px;">
+              <select name="param_load_agent" style="max-width: 200px;" onchange="this.form.requestSubmit()">
+                <option value="">...</option>
+                {%- for m in view_data["previous_agents"] %}
+                <option value="{{ m[0] }}">{{m[0]}}</option>
+                {%- endfor %}              
+              </select>
+            </form>            
           </div>
           <i class="fa-solid fa-table"></i>
           <code>Agent Parameters</code>
@@ -218,6 +221,8 @@
     $(".agent-running").show();
     $(".agent-done").hide();
     $("#run-agent").prop("disabled", true);
+    $("#agent-response").html("");
+    $("#audit-response").html("");
 
     // Fire GET request
     $.ajax({

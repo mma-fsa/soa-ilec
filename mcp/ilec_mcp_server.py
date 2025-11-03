@@ -268,34 +268,46 @@ def cmd_glmnet(workspace_id, dataset : str, x_vars : List[str], design_matrix_va
 
 @mcp.tool(description=CMD_FINALIZE_DESC)
 def cmd_finalize(workspace_id) -> Dict[str , Any]:
-    
-    final_workspace_id = None
-    renv = create_REnv(workspace_id, no_cmd=True)
-    with renv:
-        final_workspace_id = renv.workspace_id
-
-    # create final modeling log
-    with Database.get_session_conn() as con:
         
+    workspace_dir = None
+    with Database.get_session_conn() as con:
         session = AppSession(con)
         workspace_dir = Path(session["MCP_WORK_DIR"])
     
-        audit_reader = AuditLogReader(workspace_dir)
+    final_workspace_id = None
+    r_env = create_REnv(workspace_id)        
+    final_workspace_id = r_env.workspace_id
 
-        sql_log = audit_reader.traverse_sql_audit_log()
-        final_model_log, all_model_logs, all_by_time = audit_reader.traverse_model_audit_log(workspace_id)
+    # export the final model factors    
+    model_rds_path = workspace_dir / Path(f"workspace_{workspace_id}") / Path(f"run_model.rds")
+    if not model_rds_path.exists() or not model_rds_path.is_file():
+        raise Exception("Cannot find model, has cmd_glmnet() been called?")
+    RCmd.run_command(
+        RCmd.cmd_export_model,
+        (
+            str(model_rds_path),
+            str(workspace_dir)
+        ),
+        r_env
+    )
 
-        finalize_data = {
-            "workspace_id": final_workspace_id,
-            "sql_log" : sql_log,
-            "final_model_log" : final_model_log,
-            "all_model_logs" : all_model_logs,
-            "all_model_logs_by_time" : all_by_time
-        }
+    # create final modeling log
+    audit_reader = AuditLogReader(workspace_dir)
 
-        with open(workspace_dir / Path("final.json"), "w") as fh:
-            json.dump(finalize_data, fh)
-    
+    sql_log = audit_reader.traverse_sql_audit_log()
+    final_model_log, all_model_logs, all_by_time = audit_reader.traverse_model_audit_log(workspace_id)
+
+    finalize_data = {
+        "workspace_id": final_workspace_id,
+        "sql_log" : sql_log,
+        "final_model_log" : final_model_log,
+        "all_model_logs" : all_model_logs,
+        "all_model_logs_by_time" : all_by_time
+    }
+
+    with open(workspace_dir / Path("final.json"), "w") as fh:
+        json.dump(finalize_data, fh)
+
     # gather PNGs / plots
     img_dir = workspace_dir / "plots"
 
@@ -305,10 +317,11 @@ def cmd_finalize(workspace_id) -> Dict[str , Any]:
     for i in list(workspace_dir.rglob("*.png")):
 
         ws_dir = i.parent.name
-        _, ws_id = ws_dir.split("_")
 
-        img_path = img_dir / f"{ws_id}.png"
-        shutil.copy(i, img_path)
+        if ws_dir.startswith("workspace_"):
+            _, ws_id = ws_dir.split("_")
+            img_path = img_dir / f"{ws_id}.png"
+            shutil.copy(i, img_path)
     
     return {
         "workspace_id": final_workspace_id, 

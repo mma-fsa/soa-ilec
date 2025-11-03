@@ -25,6 +25,7 @@ DEFAULT_DDB_INIT_SQL = "create view if not exists ILEC_DATA as "\
 DEFAULT_DDB_ROW_LIMIT = 1000
 
 AGENT_R_LIB = "/home/mike/workspace/soa-ilec/soa-ilec/mcp/ilec_r_lib.R"
+EXPORT_R_LIB = "/home/mike/workspace/soa-ilec/soa-ilec/mcp/model_export_lib.R"
 
 DEFAULT_MCP_URL = "http://127.0.0.1:9090/mcp/"
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or Path("/home/mike/workspace/soa-ilec/soa-ilec/.openai_key").read_text().strip()

@@ -8,8 +8,6 @@ library(tidyverse)
 
 export_factors <- function(model_rds_path, export_location) {
 
-  browser()
-    
   model_data <- read_rds(model_rds_path)
   md_env <- environment(model_data)
   
@@ -59,9 +57,9 @@ export_factors <- function(model_rds_path, export_location) {
   
   model_factor_wb <- get_factor_wb(model_factor_wb, model_factors)
   
-  out_path <- file.path(export_location, "model_factors.xlsx")
+  out_path <- file.path(export_location, "/model_factors.xlsx")
   
-  saveWorkbook(model_factor_wb, out_path, overwrite = TRUE)
+  saveWorkbook(model_factor_wb, out_path)
 }
 
 map_model_matrix_terms <- function(formula, data) {
@@ -370,8 +368,8 @@ get_factor_wb <- function(wb, results) {
   return(wb)
 }
 
-export_factors(
-  "~/workspace/soa-ilec/soa-ilec/data/workspaces/ul_model_data/workspace_d4386607-1f7e-4e80-80ec-5f295ca5dbef/run_model.rds",
-  "~/workspace/soa-ilec/soa-ilec/data/workspaces/ul_model_data/"
-)
+# export_factors(
+#   "~/workspace/soa-ilec/soa-ilec/data/workspaces/ul_model_data/workspace_d4386607-1f7e-4e80-80ec-5f295ca5dbef/run_model.rds",
+#   "~/workspace/soa-ilec/soa-ilec/data/workspaces/ul_model_data/"
+# )
 

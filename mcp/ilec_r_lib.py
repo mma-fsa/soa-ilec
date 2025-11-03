@@ -1,12 +1,6 @@
 from typing import Callable, Iterable, List, Any
 from multiprocessing import Process, Queue
 
-from rpy2.robjects import r, globalenv
-from rpy2.robjects.vectors import StrVector, FloatVector
-from rpy2.robjects import ListVector
-from rpy2.robjects.packages import importr
-from rpy2.rinterface_lib.embedded import endr
-
 from pathlib import Path
 
 import logging
@@ -17,7 +11,11 @@ import os
 import sys
 
 from audit import AuditLogEntry
-from env_vars import AGENT_R_LIB, DEFAULT_DDB_PATH
+from env_vars import AGENT_R_LIB, DEFAULT_DDB_PATH, EXPORT_R_LIB, DEFAULT_AGENT_WORK_DIR
+
+R_TMP_DIR = Path(DEFAULT_AGENT_WORK_DIR) / "r_tmp"
+R_TMP_DIR.mkdir(exist_ok=True, parents=True)
+os.environ["TMPDIR"] = str(R_TMP_DIR)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -45,13 +43,16 @@ class ILECREnvironment:
         self.log = logging.getLogger(__name__)
         self.this_workspace_id = self.work_dir / f"workspace_{self.workspace_id}/"
 
+        # rpy2 complications
+        self.rpy2_env = None
+
         # these should get set by enter()
         self.rduckdb = None
         self.rDBI = None
         self.rconn = None        
 
         self.run_setup = True
-        self.disposed = False
+        self.disposed = False        
     
     def __enter__(self):
         
@@ -59,7 +60,7 @@ class ILECREnvironment:
         
         if self.disposed:
             raise Exception("Environment is already disposed.")
-
+        
         if self.run_setup:
             
             # create the session directory
@@ -75,6 +76,10 @@ class ILECREnvironment:
             # if this is the initial session, do nothing
             if self.no_cmd:
                 return
+            
+            # these are only inited when we fork()
+            importr = self.rpy2_env["importr"]
+            r = self.rpy2_env["r"]
 
             # init packages
             self.rduckdb = importr("duckdb")
@@ -144,7 +149,7 @@ class ILECREnvironment:
 
 # fork() entry point
 def run_target(*args):                    
-    
+        
     res = None    
     log = logging.getLogger(__name__)
     arg_list = list(args)
@@ -157,13 +162,35 @@ def run_target(*args):
         log.error(err_msg)
         raise Exception(err_msg)
 
-    try:        
-        
+    try:                
         audit = AuditLogEntry(r_env)
         tool_name = target.__name__
+
+        # --------------------
+        # RPy2 fork() complications,
+        # basically we don't want to fork() with a running R process already started.
+        from rpy2.robjects import r as _r, globalenv as _globalenv
+        from rpy2.robjects.vectors import StrVector as _StrVector, FloatVector as _FloatVector
+        from rpy2.robjects import ListVector as _ListVector
+        from rpy2.robjects.packages import importr as _importr
+        from rpy2.rinterface_lib.embedded import endr as _endr
+        
+        rpy2_env = {
+            "r" : _r,
+            "globalenv" : _globalenv,
+            "StrVector" : _StrVector,
+            "FloatVector" : _FloatVector,
+            "ListVector" : _ListVector,
+            "importr"  : _importr,
+            "endr" : _endr
+        }
+        # --------------------
+
+        r_env.rpy2_env = rpy2_env
         with r_env:                        
-            r.source(AGENT_R_LIB)
-            R_arg_list = [r_env.rconn] + target_args
+            _r.source(AGENT_R_LIB)
+            _r.source(EXPORT_R_LIB)
+            R_arg_list = [rpy2_env, r_env.rconn] + target_args
             # call tool
             res = {
                 "success": True,
@@ -183,7 +210,7 @@ def run_target(*args):
     finally:        
         res = res if res is not None else {"success": False, "message": "unknown error"}
         q.put(res)
-        endr(0)
+        _endr(0)
         sys.exit(0)
 
 
@@ -203,7 +230,8 @@ class AgentRCommands:
         return res
     
     @staticmethod
-    def cmd_create_dataset(conn, dataset_name:str, sql:str):
+    def cmd_create_dataset(rpy2_env, conn, dataset_name:str, sql:str):
+        r = rpy2_env["r"]        
         res = r.cmd_create_dataset(
             conn,
             dataset_name,
@@ -216,7 +244,10 @@ class AgentRCommands:
 
     
     @staticmethod
-    def cmd_run_inference(conn, dataset_in : str, dataset_out : str):
+    def cmd_run_inference(rpy2_env, conn, dataset_in : str, dataset_out : str):
+        
+        r = rpy2_env["r"]
+        
         success = r.cmd_run_inference(
             conn,
             dataset_in,
@@ -225,7 +256,11 @@ class AgentRCommands:
         return f"created dataset {dataset_out} with predictions contained in MODEL_PRED column."
 
     @staticmethod
-    def cmd_rpart(conn, dataset: str, x_vars: List[str], offset: str, y_var: str, max_depth : int, cp : float):
+    def cmd_rpart(rpy2_env, conn, dataset: str, x_vars: List[str], offset: str, y_var: str, max_depth : int, cp : float):
+        
+        r = rpy2_env["r"]        
+        StrVector = rpy2_env["StrVector"]
+        
         res = r.cmd_rpart(
             conn, 
             dataset,
@@ -238,9 +273,14 @@ class AgentRCommands:
         return "\n".join(r["capture.output"](r.print(res)))
     
     @staticmethod
-    def cmd_glmnet(conn, dataset : str, x_vars : List[str], design_matrix_vars : List[str], \
+    def cmd_glmnet(rpy2_env, conn, dataset : str, x_vars : List[str], design_matrix_vars : List[str], \
               factor_vars_levels: dict, num_var_clip : dict, offset_var : str, y_var : str, lambda_strat : str):                
         
+        r = rpy2_env["r"]
+        ListVector = rpy2_env["ListVector"]
+        FloatVector = rpy2_env["FloatVector"]
+        StrVector = rpy2_env["StrVector"]
+
         r_num_var_clip = ListVector({k: FloatVector(v) for k, v in num_var_clip.items()})
 
         res = r.cmd_glmnet(
@@ -260,3 +300,12 @@ class AgentRCommands:
             "ae_train" : float(res[1][0])
         }
     
+    @staticmethod
+    def cmd_export_model(rpy2_env, conn, model_rds_path : str, export_location : str):        
+        r = rpy2_env["r"]        
+        r.export_factors(
+            str(model_rds_path),
+            str(export_location)
+        )
+
+        return export_location

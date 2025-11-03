@@ -1,6 +1,6 @@
 from app_shared import Database
-from env_vars import DEFAULT_DATA_EXPORT_DIR
-import uuid
+from env_vars import DEFAULT_DATA_EXPORT_DIR, DEFAULT_AGENT_WORK_DIR
+import uuid, json
 import pandas as pd
 from pathlib import Path
 from operator import itemgetter
@@ -126,3 +126,24 @@ class AgentViewModel:
             self.conn.execute(f"pragma table_info({view_name})")
         ), ["name"])
     
+    def get_previous_agents(self):
+                
+        agent_dirs = []
+        for p in Path(DEFAULT_AGENT_WORK_DIR).iterdir():            
+            if p.is_dir() and (p / "final.json").exists():
+                agent_dirs.append(p)            
+
+        agent_names = map(
+            lambda x: str(x.name),
+            agent_dirs)
+        
+        return list(zip(agent_names, agent_dirs))
+
+    def get_agent_data(self, agent_name):
+
+        agent_dir = Path(DEFAULT_AGENT_WORK_DIR) / agent_name
+
+        final_data = None
+        with open(agent_dir / "final.json", "r") as fh:
+            final_data = json.load(fh)
+        

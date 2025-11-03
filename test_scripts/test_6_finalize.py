@@ -7,7 +7,7 @@ async def call_mcp_tool():
             # Call the 'add' tool with specific parameters
             tool_name = "cmd_finalize"
             params = {
-                "workspace_id" : "cd8f0950-99b7-4095-8b33-0d6869eada2a"
+                "workspace_id" : "5dfed9ed-26a4-4cd9-9fb1-80f22e35988b"
             }
             
             print(f"Calling tool '{tool_name}' with parameters: {params}")
