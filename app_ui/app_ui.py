@@ -1,6 +1,6 @@
 import os, re
 from starlette.applications import Starlette
-from starlette.responses import HTMLResponse, FileResponse, JSONResponse
+from starlette.responses import HTMLResponse, FileResponse, JSONResponse, PlainTextResponse
 from starlette.requests import Request
 from starlette.routing import Route, Mount
 from starlette.staticfiles import StaticFiles
@@ -266,6 +266,18 @@ async def start_agent(request: Request):
         "audit_log" : audit_response_html
     })
 
+GUID_RE = re.compile(r"^[0-9a-fA-F-]{8,}$")
+
+async def plots(request):
+    agent_name = request.path_params["agent_name"]
+    session_id = request.path_params["session_id"]
+
+    # (Optional) validate / normalize
+    if not GUID_RE.match(session_id):
+        return PlainTextResponse("invalid session_id", status_code=400)
+
+    # do your thing (e.g., locate plot files, query, etc.)
+    return JSONResponse({"agent_name": agent_name, "session_id": session_id})
 
 routes = [
     Route("/", data, methods=["GET", "POST"]),
@@ -274,6 +286,7 @@ routes = [
     Route("/start_agent", start_agent, methods=["GET"]),    
     Route("/agent_response", agent_response, methods=["GET"]),
     Route("/audit", audit, methods=["GET", "POST"]),
+    Route("/plots/{agent_name}/{session_id}", endpoint=plots, methods=["GET"]),
     Mount("/static", app=StaticFiles(directory="static"), name="static"),
     Mount("/img", app=StaticFiles(directory="img"), name="img")
 ]

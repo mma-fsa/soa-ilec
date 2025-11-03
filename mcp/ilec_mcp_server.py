@@ -8,7 +8,7 @@ POST to:
   http://127.0.0.1:8000/mcp
 """
 
-import time, re, uuid, json
+import time, re, uuid, json, shutil
 from typing import Any, Dict, List
 from starlette.responses import PlainTextResponse
 from mcp.server.fastmcp import FastMCP, Context
@@ -274,6 +274,7 @@ def cmd_finalize(workspace_id) -> Dict[str , Any]:
     with renv:
         final_workspace_id = renv.workspace_id
 
+    # create final modeling log
     with Database.get_session_conn() as con:
         
         session = AppSession(con)
@@ -294,6 +295,20 @@ def cmd_finalize(workspace_id) -> Dict[str , Any]:
 
         with open(workspace_dir / Path("final.json"), "w") as fh:
             json.dump(finalize_data, fh)
+    
+    # gather PNGs / plots
+    img_dir = workspace_dir / "plots"
+
+    if not img_dir.exists():
+        img_dir.mkdir(exist_ok=True)
+
+    for i in list(workspace_dir.rglob("*.png")):
+
+        ws_dir = i.parent.name
+        _, ws_id = ws_dir.split("_")
+
+        img_path = img_dir / f"{ws_id}.png"
+        shutil.copy(i, img_path)
     
     return {
         "workspace_id": final_workspace_id, 

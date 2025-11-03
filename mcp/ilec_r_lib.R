@@ -203,6 +203,8 @@ cmd_glmnet <- function(conn, dataset, x_vars, design_matrix_vars, factor_vars_le
     stop(sprintf("Invalid factor names: %s", bad_factors))
   }
   
+  training_data_vals <- list()
+  
   # convert them to factors using step_string2factor, 
   # use the default level if it is present in the factor_vars_levels
   for (cv in char_vars) {
@@ -219,6 +221,8 @@ cmd_glmnet <- function(conn, dataset, x_vars, design_matrix_vars, factor_vars_le
     } else {
       var_levels = sort(unique_values)
     }
+    
+    training_data_vals[[cv]] <- var_levels
     
     prep_glmnet_data <- prep_glmnet_data %>%      
       step_mutate(!!cv := as.character(!!sym(cv))) %>%
@@ -245,12 +249,23 @@ cmd_glmnet <- function(conn, dataset, x_vars, design_matrix_vars, factor_vars_le
       )
     } 
     
+    # assume integer
+    training_data_vals[[nv]] <- c(var_range[1], var_range[2])
+    
+    min_val <- var_range[1]
+    max_val <- var_range[2]
+    
     prep_glmnet_data <- prep_glmnet_data %>%
-      step_range(!!sym(nv), min = var_range[1], max = var_range[2])
+      step_mutate(
+        !!rlang::sym(nv) := pmax(!!min_val,
+                                 pmin(!!max_val, !!rlang::sym(nv)))
+      )
   }
   
   prep_glmnet_data <- prep_glmnet_data %>%
     prep(glmnet_data, retain=F)
+  
+  prep_glmnet_data <- butcher::butcher(prep_glmnet_data)
   
   # apply transformations before building design matrix
   glmnet_data.prepped <- bake(prep_glmnet_data, glmnet_data)
@@ -338,6 +353,7 @@ cmd_glmnet <- function(conn, dataset, x_vars, design_matrix_vars, factor_vars_le
     offset_var = offset_var,
     dmat_formula = dmat_formula,
     best_lambda = best_lambda,    
+    training_data_vals = training_data_vals,
     args = list(
       "dataset" = dataset, 
       "x_vars" = x_vars, 
@@ -378,6 +394,9 @@ cmd_glmnet <- function(conn, dataset, x_vars, design_matrix_vars, factor_vars_le
     3,
     0.001)
   )
+  
+  # butcher isn't removing a huge remenant of the fit in the rpart_train
+  rpart_train$where <- NULL
   
   # remove vw_glmnet_data
   duckdb::duckdb_unregister(conn, "vw_glmnet_data")
