@@ -122,7 +122,7 @@
                   </option>
                   {% endfor %}
                 </select>
-                <div class="form-text">Must be an existing SQL view, use <a href="/data"">Data</a> to create</div>
+                <div class="form-text">Must be an existing SQL view, use the <a href="/data">query editor</a> to create</div>
               </div>
 
               <div class=" mb-3">
@@ -166,7 +166,7 @@
       <div class="card-body d-flex flex-column">
         <div class="results-meta">
           <h2 class="h6 m-0">Agent Response</h2>
-          <span id="elapsed" class="badge bg-success agent-done" style="{{"display: block;" if view_data["param_agent_name"] != "" else ""}}">Agent Finished</span>
+          <span id="elapsed" class="badge bg-success agent-done" {{"style='display: block;'" if view_data["param_agent_name"] != "" else ""}}>Agent Finished</span>
           <span id="error" class="badge bg-warning text-dark agent-running">Running...</span>
         </div>
         <div id="results" class="results-body">
@@ -300,11 +300,10 @@
       },
       success: function (response) {
         stop_polling();
-        // redirect construct the new URL
+        
         const url = new URL(window.location.href);
-        url.searchParams.set("agent_name", encodeURIComponent(agent_name));
-
-        // redirect
+        url.searchParams.delete("param_load_agent");
+        url.searchParams.set("param_load_agent", encodeURIComponent(agent_name));    
         window.location.href = url.toString();
 
         // Update the response divs

@@ -15,9 +15,20 @@ library(rpart)
 library(tidyverse)
 
 AGENT_LIB = "~/workspace/soa-ilec/soa-ilec/mcp/ilec_r_lib.R"
-AGENT_WS_DIR = "~/workspace/soa-ilec/soa-ilec/data/workspaces/ul_model_data/workspace_d4386607-1f7e-4e80-80ec-5f295ca5dbef"
+EXPORT_LIB = "~/workspace/soa-ilec/soa-ilec/mcp/model_export_lib.R"
+AGENT_WS_DIR = "~/workspace/soa-ilec/soa-ilec/data/workspaces/ul_model_data/workspace_379553d1-5f37-45bc-8ad9-0e104cc7c082/"
 
 ```
+
+```{r}
+# attempt export
+source(EXPORT_LIB)
+model_rds_path = paste0(AGENT_WS_DIR, "run_model.rds")
+export_factors(model_rds_path, AGENT_WS_DIR)
+
+```
+
+
 
 # Read Model RDS
 

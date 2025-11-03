@@ -299,8 +299,16 @@ class AuditLogRenderer:
         reader = AuditLogReader(self.mcp_work_dir)
         
         sql_log = reader.traverse_sql_audit_log()
-        final_cmd_log, _, full_cmd_log_by_time = reader.traverse_model_audit_log()
-                
+        final_cmd_tree, _, full_cmd_log_by_time = reader.traverse_model_audit_log()
+
+        bfs_work = [final_cmd_tree]
+        final_cmd_log = []
+        while len(bfs_work) > 0:
+            curr_node = bfs_work.pop(0)
+            final_cmd_log.append(curr_node)
+            if curr_node["next"] is not None:
+                bfs_work.append(curr_node["next"])
+
         env = Environment(
             loader=FileSystemLoader(COMMON_TEMPLATE_DIR),
             autoescape=select_autoescape(["html", "xml"])
@@ -311,5 +319,8 @@ class AuditLogRenderer:
         return audit_template.render(
             agent_name = safe_agent_name,
             sql_log = sql_log,
-            cmd_log = full_cmd_log_by_time
+            cmd_log = [
+                ("Final Model Audit Log", final_cmd_log),
+                ("All Modeling Commands", full_cmd_log_by_time)
+            ]            
         )

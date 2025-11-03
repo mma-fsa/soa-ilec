@@ -9,8 +9,9 @@
 {% endfor %}
 {% endif %}
 {% if cmd_log %}
-<h2>Modeling Command Audit Log</h2>
-{% for c in cmd_log %}
+{% for title, audit_log in cmd_log %}
+<h2>{{title}}</h2>
+{% for c in audit_log %}
 {% set workspace_id = c.workspace_id %}
 {% set ent = c.entry | default({}) or {} %}
 {% set tool = ent.get("tool_name", "unknown") %}
@@ -72,5 +73,6 @@
     </p>    
 </details>
 {%- endif %}
-{% endfor %}
-{% endif %}
+{%- endfor %}
+{%- endfor %}
+{%- endif %}

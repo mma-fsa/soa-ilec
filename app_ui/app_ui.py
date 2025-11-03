@@ -1,6 +1,6 @@
 import os, re, json, base64, mimetypes
 from starlette.applications import Starlette
-from starlette.responses import HTMLResponse, FileResponse, JSONResponse, PlainTextResponse
+from starlette.responses import HTMLResponse, FileResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from starlette.requests import Request
 from starlette.routing import Route, Mount
 from starlette.staticfiles import StaticFiles
@@ -29,6 +29,8 @@ def render(template_name, **ctx):
     return HTMLResponse(template.render(**ctx))
 
 # --- Routes that render views / handle posts ---
+async def default_handler(request: Request):
+    return RedirectResponse("/agent", status_code=302)
 
 async def data(request: Request):
     
@@ -425,7 +427,7 @@ async def poll_agent(request: Request):
 # --- Configure server routes ---
 
 routes = [
-    Route("/", data, methods=["GET", "POST"]),
+    Route("/", default_handler, methods=["GET", "POST"]),
     Route("/data", data, methods=["GET", "POST"]),
     Route("/agent", agent, methods=["GET", "POST"]),
     Route("/start_agent", start_agent, methods=["GET"]),    

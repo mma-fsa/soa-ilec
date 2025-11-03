@@ -31,8 +31,6 @@ export_factors <- function(model_rds_path, export_location) {
   ))
   
   model_factors <- compute_model_factors(
-    num_vars,
-    factor_vars,
     training_vals,
     df_coefs,
     df_map,
@@ -60,6 +58,15 @@ export_factors <- function(model_rds_path, export_location) {
   out_path <- file.path(export_location, "/model_factors.xlsx")
   
   saveWorkbook(model_factor_wb, out_path)
+}
+
+get_default_covariate_df <- function(training_vals, prep_glmnet_data) {
+  
+  covars <- prep_glmnet_data$term_info %>% 
+    filter(role == "predictor") %>%
+    pull(variable)
+  
+  default_covar_df <- 0
 }
 
 map_model_matrix_terms <- function(formula, data) {
@@ -155,7 +162,7 @@ sparse_coefs_to_df <- function(coefs) {
 ## small infix for defaults
 `%||%` <- function(a, b) if (!is.null(a)) a else b
 
-compute_model_factors <- function(num_vars, factor_vars, training_vals, df_coefs, df_map, formula, prep_glmnet_data) {
+compute_model_factors <- function(training_vals, df_coefs, df_map, formula, prep_glmnet_data) {
   stopifnot(is.data.frame(df_coefs), is.data.frame(df_map))
   
   ## ---- Normalize df_coefs to have columns: term_name, estimate ----
@@ -191,12 +198,7 @@ compute_model_factors <- function(num_vars, factor_vars, training_vals, df_coefs
         } else {
           unique(vals)
         }
-      } else if (v %in% names(num_vars)) {
-        rng <- num_vars[[v]]
-        seq(from = rng[1], to = rng[2], by = 1L)
-      } else if (v %in% names(factor_vars)) {
-        unique(training_vals[[v]] %||% factor_vars[[v]])
-      } else {
+      }  else {
         NA
       }
     })
@@ -208,13 +210,13 @@ compute_model_factors <- function(num_vars, factor_vars, training_vals, df_coefs
     for (v in vars) if (is.numeric(df_grid[[v]])) df_grid[[v]] <- as.integer(df_grid[[v]])
     
     ## ---- build full frame for model.matrix (fill non-group vars with typicals), then bake ----
-    full_vars <- unique(c(names(num_vars), names(factor_vars)))
+    full_vars <- unique(names(training_vals))
     df_vals_full <- df_grid
     for (v in setdiff(full_vars, names(df_vals_full))) {
-      if (v %in% names(factor_vars)) {
-        if (v %in% names(training_vals)) df_vals_full[[v]] <- training_vals[[v]][1] else df_vals_full[[v]] <- factor_vars[[v]][1]
-      } else if (v %in% names(num_vars)) {
-        rng <- num_vars[[v]]
+      if (is.character(training_vals[[v]])) {
+        df_vals_full[[v]] <- training_vals[[v]][1]
+      } else if (is.numeric(training_vals[[v]])) {
+        rng <- training_vals[[v]]
         df_vals_full[[v]] <- as.integer(floor(mean(rng)))
       }
     }
