@@ -213,3 +213,4 @@ data/*
 .Rhistory
 .vscode/
 mcp_agent_work/*
+raw_data/

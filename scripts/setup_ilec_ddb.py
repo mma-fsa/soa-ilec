@@ -60,8 +60,5 @@ try:
 except Exception as e:
     print(f"An error occurred: {e}")
 
-con.execute("""create or replace view v_ilec as (select * from ilec_mortality_raw)""")
-print("created v_ilec")
-
 # Close the connection
 con.close()
