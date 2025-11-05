@@ -397,7 +397,7 @@ async def start_agent(request: Request):
         "target_var" : target_var,
         "offset_var" : offset_var,
         "prompt" : str(modeling_prompt),
-        "custom_prompt" : custom_prompt
+        "custom_prompt" : custom_prompt or ""
     }    
     with open(work_dir / "agent_params.json", "w") as fh:
         json.dump(agent_params, fh)

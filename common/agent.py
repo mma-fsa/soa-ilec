@@ -52,7 +52,9 @@ class AssumptionsAgent:
             app_session["AGENT_STATUS"] = status
         
     async def prompt_async(self, agent_name : str, prompt):
-        
+
+        # todo: mutex lock via file so only one running per system
+
         self._set_active_agent_name(agent_name)
         self._set_active_agent_status("PENDING")
 
