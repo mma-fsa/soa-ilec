@@ -220,8 +220,7 @@
           <button id="run-agent" class="btn btn-primary">Run Agent</button>
           <button id="reset-agent" class="btn"><i class="fa-solid fa-xmark"></i> Clear All</button>
           <span id="hint_readonly_checked" class="text-muted ms-auto small">
-            <code>Agent Name:</code> <input id="param_agent_name" type="textbox" name="run_name" value="{{view_data["
-              param_agent_name"]}}">
+            <code>Agent Name:</code> <input id="param_agent_name" type="textbox" name="run_name" value="{{view_data["param_agent_name"]}}">
           </span>
         </div>
       </div>
@@ -233,8 +232,7 @@
       <div class="card-body d-flex flex-column">
         <div class="results-meta">
           <h2 class="h6 m-0">Agent Response</h2>
-          <span id="elapsed" class="badge bg-success agent-done" {{"style='display: block;'" if view_data["
-            param_agent_name"] !="" else "" }}>Agent Finished</span>
+          <span id="elapsed" class="badge bg-success agent-done" {{"style='display: block;'" if view_data["param_agent_name"] !="" else "" }}>Agent Finished</span>
           <span id="error" class="badge bg-warning text-dark agent-running">Running...</span>
         </div>
         <div id="results" class="results-body">
