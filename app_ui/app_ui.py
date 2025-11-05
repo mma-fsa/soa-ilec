@@ -153,6 +153,7 @@ async def agent(request: Request):
             view_data["param_selected_view"] = selected_view
             view_data["param_selected_target"] = agent_params["target_var"]
             view_data["param_selected_offset"] = agent_params["offset_var"]
+            view_data["param_custom_prompt"] = agent_params["custom_prompt"]
 
             # set agent response
             view_data["agent_response"] = agent_data["agent_response"]
@@ -271,12 +272,13 @@ async def export_artifact(request):
 # --- Routes for js async (XmlHttpRequest) ---
 async def start_agent(request: Request):
     
-    # read GET params
+    # read GET params (this should really be a POST)
     qp = request.query_params
     agent_name = qp.get("agent_name", "").strip()
     model_data_view = qp.get("model_data_view", "").strip()
     target_var = qp.get("target_var", "").strip().upper()
-    offset_var = qp.get("offset_var", "").strip().upper()    
+    offset_var = qp.get("offset_var", "").strip().upper()
+    custom_prompt = qp.get("custom_prompt", "").strip().lower()
 
     # helpers
     def get_error_json(message = "error", invalid = None):
@@ -362,7 +364,8 @@ async def start_agent(request: Request):
         model_data_vw = model_data_view,
         predictors=predictor_cols,
         target_var=target_var,
-        offset_var=offset_var
+        offset_var=offset_var,
+        custom_prompt=custom_prompt if len(custom_prompt) > 0 else None
     )
         
     # create an assumptions agent
@@ -393,7 +396,8 @@ async def start_agent(request: Request):
         "predictors" : predictor_cols,
         "target_var" : target_var,
         "offset_var" : offset_var,
-        "prompt" : str(modeling_prompt)
+        "prompt" : str(modeling_prompt),
+        "custom_prompt" : custom_prompt
     }    
     with open(work_dir / "agent_params.json", "w") as fh:
         json.dump(agent_params, fh)

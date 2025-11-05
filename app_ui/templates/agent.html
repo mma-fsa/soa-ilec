@@ -5,6 +5,38 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codemirror/theme-one-dark@6.2.0/theme-one-dark.css" />
 <style>
 
+  .form-textarea {        
+    display: block;
+    min-height: 200px;    
+    width: 30vw;
+    padding: .75rem 4.5rem .75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 300;
+    line-height: 1.5;
+    color: var(--bs-body-color);
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-color: #f7f7f9;    
+    background-repeat: no-repeat;
+    background-position: right 1.5rem center;
+    background-size: 16px 12px;
+    border: 0 solid var(--bs-border-color);
+    border-radius: 0;
+    transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+  }
+
+  .nav-pills .nav-link {
+    text-decoration: underline;
+    color: #999999;
+  }
+
+  .nav-pills .nav-link.active, .nav-pills .show>.nav-link {
+      color: black;
+      background-color: white;      
+      text-decoration: none !important;
+  }
+
   .export-data {
     padding-top: 5px;
   }
@@ -12,7 +44,7 @@
   .export-data a {
     margin-left: 25px;
   }
-  
+
   .export-data a:first-child {
     margin-left: 5px;
   }
@@ -50,6 +82,7 @@
     height: 72vh;
     display: flex;
     flex-direction: column;
+    min-height: 600px;
   }
 
   .editor-shell {
@@ -100,61 +133,95 @@
                 <option value="">...</option>
                 {%- for m in view_data["previous_agents"] %}
                 <option value="{{ m[0] }}">{{m[0]}}</option>
-                {%- endfor %}              
+                {%- endfor %}
               </select>
-            </form>            
+            </form>
           </div>
-          <i class="fa-solid fa-table"></i>
+          <i class="fa-solid fa-gear"></i>
           <code>Agent Parameters</code>
         </h1>
 
         <form method="post" class="mx-auto" style="max-width: 640px;">
           <div class="editor-shell">
-            <div class="container my-3">
+            <!-- Tabs -->
+            <ul class="nav nav-pills" id="demoTabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="basic-params-tab" data-bs-toggle="tab"
+                  data-bs-target="#basic-params" type="button" role="tab" aria-controls="basic-params"
+                  aria-selected="true">
+                  Basic Parameters
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="custom-prompt-tab" data-bs-toggle="tab" data-bs-target="#custom-prompt"
+                  type="button" role="tab" aria-controls="custom-prompt" aria-selected="false">
+                  Custom Prompt
+                </button>
+              </li>
+            </ul>
 
-              <div class="mb-3">
-                <label for="model_view" class="form-label">Modeling Data</label>
-                <select class="form-select" id="param_selected_view" name="param_selected_view"
-                  onchange="this.form.requestSubmit()">
-                  <option value="" disabled {{ "selected" if view_data["param_selected_view"]=="" else "" }}>…</option>
-                  {% for v in view_data["model_view_data_options"] %}
-                  <option value="{{ v }}" {{ "selected" if view_data["param_selected_view"]==v else "" }}>{{ v }}
-                  </option>
-                  {% endfor %}
-                </select>
-                <div class="form-text">Must be an existing SQL view, use the <a href="/data">query editor</a> to create</div>
-              </div>
+            <!-- Tab panes -->
+            <div class="tab-content border p-3" id="demoTabsContent">
+              <div class="tab-pane fade show active" id="basic-params" role="tabpanel"
+                aria-labelledby="basic-params-tab">
+                <div class="container my-3">
+                  <div class="mb-3">
+                    <label for="model_view" class="form-label">Modeling Data</label>
+                    <select class="form-select" id="param_selected_view" name="param_selected_view"
+                      onchange="this.form.requestSubmit()">
+                      <option value="" disabled {{ "selected" if view_data["param_selected_view"]=="" else "" }}>…
+                      </option>
+                      {% for v in view_data["model_view_data_options"] %}
+                      <option value="{{ v }}" {{ "selected" if view_data["param_selected_view"]==v else "" }}>{{ v }}
+                      </option>
+                      {% endfor %}
+                    </select>
+                    <div class="form-text">Must be an existing SQL view, use the <a href="/data">query editor</a> to
+                      create
+                    </div>
+                  </div>
 
-              <div class=" mb-3">
+                  <div class=" mb-3">
                     <label for="target_variable" class="form-label">Target Variable</label>
                     <select class="form-select" id="target_variable" name="target_variable">
                       <option value="" disabled selected>Choose…</option>
                       {% for col in view_data["model_view_data_cols"] %}
-                      <option value="{{ col }}" {{ "selected" if (view_data["param_selected_target"] | upper()) ==(col | upper() ) else "" }}>{{ col }}</option>
+                      <option value="{{ col }}" {{ "selected" if (view_data["param_selected_target"] | upper())==(col |
+                        upper() ) else "" }}>{{ col }}</option>
                       {% endfor %}
                     </select>
                     <div class="form-text">Outcome you intend to predict.</div>
-                </div>
+                  </div>
 
-                <div class="mb-3">
-                  <label for="offset_col" class="form-label">Offset</label>
-                  <select class="form-select" id="offset_col" name="offset_col">
-                    <option value="" disabled selected>Choose…</option>
-                    {% for col in view_data["model_view_data_cols"] %}
-                    <option value="{{ col }}" {{ "selected" if (view_data["param_selected_offset"] | upper()) == (col | upper()) else "" }}>{{ col }}</option>
-                    {% endfor %}
-                  </select>
-                  <div class="form-text">Either an expected basis or exposure column</div>
+                  <div class="mb-3">
+                    <label for="offset_col" class="form-label">Offset</label>
+                    <select class="form-select" id="offset_col" name="offset_col">
+                      <option value="" disabled selected>Choose…</option>
+                      {% for col in view_data["model_view_data_cols"] %}
+                      <option value="{{ col }}" {{ "selected" if (view_data["param_selected_offset"] | upper())==(col |
+                        upper()) else "" }}>{{ col }}</option>
+                      {% endfor %}
+                    </select>
+                    <div class="form-text">Either an expected basis or exposure column</div>
+                  </div>
+                </div>
+              </div>
+              <div class="tab-pane fade" id="custom-prompt" role="tabpanel" aria-labelledby="custom-prompt-tab">
+                <div class="mb-3">                  
+                  <div class="form-text">Enter additional instructions for the agent</div>
+                  <textarea class="form-textarea" id="param_custom_prompt" name="param_custom_prompt">{{view_data["param_custom_prompt"]}}</textarea>                  
                 </div>
               </div>
             </div>
+          </div>
         </form>
 
         <div class="d-flex align-items-center gap-2 mt-3">
           <button id="run-agent" class="btn btn-primary">Run Agent</button>
           <button id="reset-agent" class="btn"><i class="fa-solid fa-xmark"></i> Clear All</button>
           <span id="hint_readonly_checked" class="text-muted ms-auto small">
-            <code>Agent Name:</code> <input id="param_agent_name" type="textbox" name="run_name" value="{{view_data["param_agent_name"]}}">
+            <code>Agent Name:</code> <input id="param_agent_name" type="textbox" name="run_name" value="{{view_data["
+              param_agent_name"]}}">
           </span>
         </div>
       </div>
@@ -166,7 +233,8 @@
       <div class="card-body d-flex flex-column">
         <div class="results-meta">
           <h2 class="h6 m-0">Agent Response</h2>
-          <span id="elapsed" class="badge bg-success agent-done" {{"style='display: block;'" if view_data["param_agent_name"] != "" else ""}}>Agent Finished</span>
+          <span id="elapsed" class="badge bg-success agent-done" {{"style='display: block;'" if view_data["
+            param_agent_name"] !="" else "" }}>Agent Finished</span>
           <span id="error" class="badge bg-warning text-dark agent-running">Running...</span>
         </div>
         <div id="results" class="results-body">
@@ -190,7 +258,7 @@
           <div class="tab-content border border-top-0 p-3" id="demoTabsContent">
             <div class="tab-pane fade show active" id="agent" role="tabpanel" aria-labelledby="agent-tab">
               <p class="agent-running">
-                <img src="img/loading.gif"> <span class="agent-poll">Agent Running...</span>
+                <img src="img/loading.gif"> <span class="agent-poll">Agent Starting...</span>
               </p>
               <div id="agent-response">
                 {{view_data["agent_response"]}}
@@ -198,7 +266,7 @@
             </div>
             <div class="tab-pane fade" id="audit" role="tabpanel" aria-labelledby="audit-tab">
               <p class="agent-running">
-                <img src="img/loading.gif"> <span class="agent-poll">Agent Running...</span>
+                <img src="img/loading.gif"> <span class="agent-poll">Agent Starting...</span>
               </p>
               <div id="audit-response">
                 {{view_data["audit_response"]}}
@@ -208,14 +276,15 @@
 
         </div>
         {%- if load_agent_data %}
-        <details id="export-details" class="mt-2" open>          
+        <details id="export-details" class="mt-2" open>
           <summary class="small text-muted">Export</summary>
           <div class="export-data">
-            <a href="{{view_data["link_model_factors"]}}"><i class="fa-solid fa-file-excel"></i> Model Factors</a>
-            <a href="{{view_data["link_model_pred"]}}"><i class="fa-solid fa-database"></i> Model Predictions</a>
-            <a href="{{view_data["link_agent_response"]}}"><i class="fa-solid fa-file"></i> Agent Response</a>
-            <a href="{{view_data["link_audit_response"]}}"><i class="fa-solid fa-magnifying-glass"></i> Modeling Log</a>            
-          </div>          
+            <a href="{{view_data[" link_model_factors"]}}"><i class="fa-solid fa-file-excel"></i> Model Factors</a>
+            <a href="{{view_data[" link_model_pred"]}}"><i class="fa-solid fa-database"></i> Model Predictions</a>
+            <a href="{{view_data[" link_agent_response"]}}"><i class="fa-solid fa-file"></i> Agent Response</a>
+            <a href="{{view_data[" link_audit_response"]}}"><i class="fa-solid fa-magnifying-glass"></i> Modeling
+              Log</a>
+          </div>
         </details>
         {%- endif %}
       </div>
@@ -231,7 +300,7 @@
   $("#reset-agent").click(function (e) {
     e.preventDefault();
     var origin = window.location.origin;
-    var path   = window.location.pathname;    
+    var path = window.location.pathname;
     // Replace current history entry (no extra Back step):
     window.location.replace(origin + path);
   });
@@ -244,6 +313,7 @@
     var target_variable = $("#target_variable").val();
     var offset_col = $("#offset_col").val();
     var agent_name = $("#param_agent_name").val();
+    var custom_prompt = $("#param_custom_prompt").val();
 
     // Show "running" indicators, hide "done" indicators
     $(".agent-running").show();
@@ -253,10 +323,10 @@
     $("#audit-response").html("");
 
     var poll_timer = null;
-    
+
     function start_polling() {
       var is_waiting = false;
-      poll_timer = setInterval(function(){
+      poll_timer = setInterval(function () {
         if (is_waiting || poll_timer == null) {
           return
         }
@@ -293,34 +363,26 @@
       type: "GET",
       dataType: "json",
       data: {
-        "agent_name" : agent_name,
+        "agent_name": agent_name,
         "model_data_view": param_selected_view,
         "target_var": target_variable,
-        "offset_var": offset_col
+        "offset_var": offset_col,
+        "custom_prompt" : custom_prompt
       },
       success: function (response) {
         stop_polling();
-        
+
         const url = new URL(window.location.href);
         url.searchParams.delete("param_load_agent");
-        url.searchParams.set("param_load_agent", encodeURIComponent(agent_name));    
+        url.searchParams.set("param_load_agent", encodeURIComponent(agent_name));
         window.location.href = url.toString();
-
-        // Update the response divs
-        // $("#agent-response").html(response.agent_response);
-        // $("#audit-response").html(response.audit_log);
-
-        // // Hide running indicators, show done indicators
-        // $(".agent-running").hide();
-        // $(".agent-done").show();
-        // $("#run-agent").prop("disabled", false);
 
       },
       error: function (xhr, status, error) {
         stop_polling();
         try {
           message = xhr.responseJSON["message"]
-        } catch(e) {
+        } catch (e) {
           message = "Error: " + error
         }
         $("#agent-response").html("<div class='text-danger'>" + message + "</div>");

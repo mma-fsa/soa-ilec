@@ -4,6 +4,7 @@
 {% for s in sql_log %}
 <details>
     <summary>{{s["desc"]}}</summary>
+    <a href="/data?q={{s["sql"] | urlencode}}">Run Query</a>
     <pre>{{s["sql"]}}</pre>
 </details>
 {% endfor %}
