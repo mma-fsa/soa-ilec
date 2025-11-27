@@ -60,5 +60,14 @@ try:
 except Exception as e:
     print(f"An error occurred: {e}")
 
+try:
+    con.execute("create or replace view ILEC_DATA as (select * from ilec_mortality_raw)")
+    print("Created ILEC_DATA")
+except Exception as e:
+    print(f"An error occurred: {e}")
+
+
+
+
 # Close the connection
 con.close()
