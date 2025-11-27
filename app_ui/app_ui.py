@@ -1,6 +1,6 @@
 import os, re, json, base64, mimetypes
 from starlette.applications import Starlette
-from starlette.responses import HTMLResponse, FileResponse, JSONResponse, PlainTextResponse, RedirectResponse
+from starlette.responses import Response, HTMLResponse, FileResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from starlette.requests import Request
 from starlette.routing import Route, Mount
 from starlette.staticfiles import StaticFiles
@@ -22,7 +22,7 @@ from env_vars import DEFAULT_AGENT_WORK_DIR
 MCP_URL = os.environ.get("MCP_URL", "http://127.0.0.1:9090/mcp")
 
 # --- Templates ---
-templates = Environment(loader=FileSystemLoader("templates"))
+templates = Environment(loader=FileSystemLoader("app_ui/templates"))
 
 def render(template_name, **ctx):
     template = templates.get_template(template_name)
@@ -436,11 +436,31 @@ routes = [
     Route("/audit", audit, methods=["GET", "POST"]),
     Route("/plots/{agent_name}/{workspace_id}", endpoint=plots, methods=["GET"]),
     Route("/export/{agent_name}/{artifact_name}", endpoint=export_artifact, methods=["GET"]),
-    Mount("/static", app=StaticFiles(directory="static"), name="static"),
-    Mount("/img", app=StaticFiles(directory="img"), name="img")
+    Mount("/static", app=StaticFiles(directory="app_ui/static"), name="static"),
+    Mount("/img", app=StaticFiles(directory="app_ui/img"), name="img")
 ]
 
 app = Starlette(debug=True, routes=routes)
+
+NB_ORIGINS = os.getenv("NB_ORIGINS", "http://127.0.0.1:* http://localhost:*")
+
+CSP = (
+    "default-src 'self'; "
+    "img-src 'self' data:; "
+    "script-src 'self'; "
+    "style-src 'self' 'unsafe-inline'; "
+    f"frame-ancestors 'self' {NB_ORIGINS}"
+)
+
+@app.middleware("http")
+async def csp_headers(request, call_next):
+  
+  resp: Response = await call_next(request)
+  
+  if "Content-Security-Policy" in resp.headers:
+    del resp.headers["Content-Security-Policy"]
+  
+  return resp
 
 if __name__ == "__main__":
     uvicorn.run("app_ui:app", host="127.0.0.1", port=8086, reload=True)
