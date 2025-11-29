@@ -13,13 +13,33 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Debug MCP Server",
+            "name": "Debug MCP Server (Agent)",
             "type": "debugpy",
             "request": "launch",
             "module": "uvicorn",
             "cwd": "${workspaceFolder}/mcp", 
             "args": [
                 "ilec_mcp_server:app",  // module path to your FastAPI app
+                "--reload",             // auto-reload on code changes
+                "--port", "9090",       // optional
+                "--host", "127.0.0.1"
+            ],
+            "jinja": true,
+            "console": "integratedTerminal",
+            "env": {
+                "UVICORN_DEBUG": "1",
+                "PYTHONPATH": "${workspaceFolder}/common${pathSeparator}${env:PYTHONPATH}"
+            },
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "name": "Debug MCP Server (PV)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "cwd": "${workspaceFolder}/notebooks", 
+            "args": [
+                "agent_pv_mcp:app",  // module path to your FastAPI app
                 "--reload",             // auto-reload on code changes
                 "--port", "9090",       // optional
                 "--host", "127.0.0.1"

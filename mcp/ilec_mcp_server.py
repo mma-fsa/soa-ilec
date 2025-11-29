@@ -31,7 +31,7 @@ def create_REnv(workspace_id, no_cmd=False):
             
     with Database.get_session_conn() as con:
         session = AppSession(con)
-        workspace_dir = Path(session["MCP_WORK_DIR"])
+        workspace_dir = Path(session["MCP_WORK_DIR"]) # pyright: ignore[reportArgumentType]
 
         # check if this workspace dir has been finalized already
         # via a call to cmd_finalize()
@@ -41,7 +41,7 @@ def create_REnv(workspace_id, no_cmd=False):
             raise Exception("cmd_finalize() has already been called")
 
         return REnv(
-            work_dir=workspace_dir,
+            work_dir=workspace_dir, # type: ignore
             db_pragmas=Database.DDB_PRAGMAS,
             last_workspace_id=workspace_id,
             no_cmd=no_cmd
@@ -133,7 +133,7 @@ def sql_run(desc : str, sql: str, ctx: Context) -> Dict[str, Any]:
     with Database.get_session_conn() as sess_con:
         session_data = AppSession(sess_con)._get_data()
 
-    sql_log_dir = Path(session_data["MCP_WORK_DIR"]) / Path("sql_run")
+    sql_log_dir = Path(session_data["MCP_WORK_DIR"]) / Path("sql_run") # pyright: ignore[reportArgumentType]
     if not sql_log_dir.exists():
         # allow for inter-leaved calls via exist_ok = True
         sql_log_dir.mkdir(parents=True, exist_ok=True)
@@ -298,7 +298,7 @@ def cmd_finalize(workspace_id) -> Dict[str , Any]:
     workspace_dir = None
     with Database.get_session_conn() as con:
         session = AppSession(con)
-        workspace_dir = Path(session["MCP_WORK_DIR"])
+        workspace_dir = Path(session["MCP_WORK_DIR"]) # pyright: ignore[reportArgumentType]
     
     final_workspace_id = None
     r_env = create_REnv(workspace_id)        

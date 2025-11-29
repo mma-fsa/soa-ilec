@@ -88,7 +88,7 @@ class AssumptionsAgent:
             _ = asyncio.get_running_loop()
         except RuntimeError:
             # No running loop: safe to use asyncio.run directly
-            return asyncio.run(self.prompt_asyc(agent_name, prompt))
+            return asyncio.run(self.prompt_async(agent_name, prompt))
         else:
             # A loop is already running (e.g., Jupyter). Run in a separate thread.
             import concurrent.futures

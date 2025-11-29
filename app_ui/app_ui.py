@@ -379,7 +379,7 @@ async def start_agent(request: Request):
     work_dir = None
     with Database.get_session_conn() as conn:
         app_session = AppSession(conn)
-        work_dir = Path(app_session["MCP_WORK_DIR"])
+        work_dir = Path(app_session["MCP_WORK_DIR"]) # pyright: ignore[reportArgumentType]
         agent_status = app_session["AGENT_STATUS"]
 
     with open(work_dir / "response.md", "w") as fh:
@@ -388,7 +388,7 @@ async def start_agent(request: Request):
     md_render = mistune.create_markdown()
     agent_response_html = md_render(agent_response)
     with open(work_dir / "response.html", "w") as fh:
-        fh.write(agent_response_html)
+        fh.write(agent_response_html) # pyright: ignore[reportArgumentType]
 
     # write the agent parameters
     agent_params = {
