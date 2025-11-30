@@ -4,7 +4,8 @@
 {% for s in sql_log %}
 <details>
     <summary>{{s["desc"]}}</summary>
-    <pre>{{s["sql"]}}</pre>
+    <a target="_blank" href="/data?q={{s["sql"] | urlencode}}">Run Query</a>
+    <pre>{{s["sql"] | pretty_sql}}</pre>
 </details>
 {% endfor %}
 {% endif %}
@@ -22,7 +23,7 @@
     <summary><i class="fa-solid fa-table"></i>Create Dataset</summary>
     <p>
         <div>Dataset Name: {{args[0]}}</div>
-        <pre>{{args[1]}}</pre>    
+        <pre>{{args[1] | pretty_sql}}</pre>    
     </p>    
 </details>
 {%- elif tool == "cmd_rpart" %}

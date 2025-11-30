@@ -1,16 +1,28 @@
-# todo: install if these packages are missing
-library(glmnet)
-library(recipes)
-library(butcher)
-library(carrier)
-library(rpart)
-library(rpart.plot)
-library(rsample)
-library(arrow)
-library(splines)
-library(splines2)
-library(tidyverse)
+install_if_missing <- function(all_pkgs) { 
+  for (pkg_name in all_pkgs) {
+    if (!require(pkg_name, character.only=T)) {
+      install.packages(pkg_name)
+      require(pkg_name, character.only=T)
+    }  
+  }
+}
 
+# these packages will be installed if they are missing,
+# and then loaded into the RSession
+install_if_missing(c(
+  "glmnet",
+  "recipes",
+  "butcher",
+  "carrier",
+  "rpart",
+  "rpart.plot",
+  "rsample",
+  "arrow",
+  "splines",
+  "splines2",
+  "tidyverse"
+))
+  
 # this should be called prior to cmd_rpart / cmd_glmnet to create data
 # conn is setup automatically and is a connection to a DuckDB database, 
 # dataset name is the output file, should only create a dataset ONCE

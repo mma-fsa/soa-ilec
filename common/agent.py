@@ -35,7 +35,7 @@ class AssumptionsAgent:
         with Database.get_session_conn() as conn:
             app_session = AppSession(conn)
             app_session["AGENT_NAME"] = agent_name
-            app_session["AGENT_LAST_ACTION"] = "Agent Running..."
+            app_session["AGENT_LAST_ACTION"] = "Agent starting..."
             work_dir_path = Path(DEFAULT_AGENT_WORK_DIR) / Path(agent_name + "/")
             if not work_dir_path.exists():
                 work_dir_path.mkdir(parents=True, exist_ok=True)
@@ -52,7 +52,9 @@ class AssumptionsAgent:
             app_session["AGENT_STATUS"] = status
         
     async def prompt_async(self, agent_name : str, prompt):
-        
+
+        # todo: mutex lock via file so only one running per system
+
         self._set_active_agent_name(agent_name)
         self._set_active_agent_status("PENDING")
 
@@ -86,7 +88,7 @@ class AssumptionsAgent:
             _ = asyncio.get_running_loop()
         except RuntimeError:
             # No running loop: safe to use asyncio.run directly
-            return asyncio.run(self.prompt_asyc(agent_name, prompt))
+            return asyncio.run(self.prompt_async(agent_name, prompt))
         else:
             # A loop is already running (e.g., Jupyter). Run in a separate thread.
             import concurrent.futures

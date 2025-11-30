@@ -47,7 +47,7 @@ BASE_AGENT_INSTRUCTIONS = "You are assisting an actuary performing data analysis
 
 class ModelingPrompt:
 
-    def __init__(self, model_data_vw, predictors, target_var, offset_var, tt_split_col="DATASET"):
+    def __init__(self, model_data_vw, predictors, target_var, offset_var, custom_prompt=None, tt_split_col="DATASET"):
         
         train_dataset_name = "model_data_train"
         test_dataset_name = "model_data_test"
@@ -77,7 +77,7 @@ class ModelingPrompt:
              """Next, determine variable importance call(s) using cmd_rpart(), use both actuarial soundness and predictive power as criteria for selecting variables."""\
              """Then, call cmd_glmnet() to build a model, any splines specified in design_matrix_vars must have both `Boundary.knots` and `knots` fully specified, do not use the `df` argument."""\
              """Use the decision tree returned by cmd_glmnet() to refine the design matrix, particularly inner knot locations."""\
-            f"""Then run inference using cmd_run_inference() on both {train_dataset_name} and {test_dataset_name} to create perm_data_*_preds."""\
+            f"""Then run inference using cmd_run_inference() on both {train_dataset_name} and {test_dataset_name} to create {train_dataset_name}_preds and {test_dataset_name}_preds."""\
              """Run a decision tree on the results using cmd_rpart() and evaluate the final results."""\
             f"""Backtrack if necessary using what you learned from the inference results on {test_dataset_name} """\
                 """and repeat the rest of modeling process, but do not call cmd_init() again."""\
@@ -86,10 +86,13 @@ class ModelingPrompt:
              """Provide an final summary in markdown format with the following headers/sections in order: """\
                 """Overview, Data Quality, Inferential Modeling, Modeling, Model Validation. Make extensive use of markdown to maximize readability."""\
              """If backtracking was used, use sub-headers within each of Inferential Modeling, Modeling, and Model Validation """\
-             """that say "round #1", "round #2"."""\
+             """that say "round #1", "round #2", etc."""\
             f"""Prefer to use bullet points and avoid deep nesting. Use checkmarks next to metrics that provide evidence of model soundness."""\
              """Avoid statistical language, and use concise, easy to read, short sentences especially in the Overview section.""" 
-             
+
+        custom_prompt = (custom_prompt or "").strip()
+        if len(custom_prompt) > 0:
+            self.modeling_prompt += "These additional instructions must be followed exactly: " + custom_prompt
 
     def __str__(self):
         return self.modeling_prompt

@@ -153,6 +153,7 @@ async def agent(request: Request):
             view_data["param_selected_view"] = selected_view
             view_data["param_selected_target"] = agent_params["target_var"]
             view_data["param_selected_offset"] = agent_params["offset_var"]
+            view_data["param_custom_prompt"] = agent_params["custom_prompt"]
 
             # set agent response
             view_data["agent_response"] = agent_data["agent_response"]
@@ -163,6 +164,7 @@ async def agent(request: Request):
             view_data["link_agent_response"] = artifact_links["agent_response"]
             view_data["link_audit_response"] = artifact_links["audit_response"]
             view_data["link_model_pred"] = artifact_links["model_pred"]
+            view_data["link_model_files"] = artifact_links["model_files"]
 
         if request.method == "POST":
             selected_view = str(form_data["param_selected_view"]).strip()            
@@ -218,6 +220,7 @@ async def export_artifact(request):
         "model_factors": "model_factors.xlsx",
         "agent_response": "response.md",
         "audit_response": "audit.html",
+        "model_files" : "model.zip"
     }
 
     agent_name = request.path_params["agent_name"]
@@ -251,6 +254,8 @@ async def export_artifact(request):
             mime = "text/markdown; charset=utf-8"
         elif artifact_path.suffix.lower() == ".xlsx":
             mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        elif artifact_path.suffix.lower() == ".zip":
+            mime = "application/zip"
         else:
             mime = "application/octet-stream"
 
@@ -263,20 +268,21 @@ async def export_artifact(request):
     return FileResponse(
         path=str(artifact_path),
         media_type=mime,
-        filename=download_name,                   # Starlette >= 0.27
+        filename=download_name,                   
         content_disposition_type="attachment",
-        headers=headers,
+        headers=headers
     )
 
 # --- Routes for js async (XmlHttpRequest) ---
 async def start_agent(request: Request):
     
-    # read GET params
+    # read GET params (this should really be a POST)
     qp = request.query_params
     agent_name = qp.get("agent_name", "").strip()
     model_data_view = qp.get("model_data_view", "").strip()
     target_var = qp.get("target_var", "").strip().upper()
-    offset_var = qp.get("offset_var", "").strip().upper()    
+    offset_var = qp.get("offset_var", "").strip().upper()
+    custom_prompt = qp.get("custom_prompt", "").strip().lower()
 
     # helpers
     def get_error_json(message = "error", invalid = None):
@@ -362,7 +368,8 @@ async def start_agent(request: Request):
         model_data_vw = model_data_view,
         predictors=predictor_cols,
         target_var=target_var,
-        offset_var=offset_var
+        offset_var=offset_var,
+        custom_prompt=custom_prompt if len(custom_prompt) > 0 else None
     )
         
     # create an assumptions agent
@@ -376,7 +383,7 @@ async def start_agent(request: Request):
     work_dir = None
     with Database.get_session_conn() as conn:
         app_session = AppSession(conn)
-        work_dir = Path(app_session["MCP_WORK_DIR"])
+        work_dir = Path(app_session["MCP_WORK_DIR"]) # pyright: ignore[reportArgumentType]
         agent_status = app_session["AGENT_STATUS"]
 
     with open(work_dir / "response.md", "w") as fh:
@@ -385,7 +392,7 @@ async def start_agent(request: Request):
     md_render = mistune.create_markdown()
     agent_response_html = md_render(agent_response)
     with open(work_dir / "response.html", "w") as fh:
-        fh.write(agent_response_html)
+        fh.write(agent_response_html) # pyright: ignore[reportArgumentType]
 
     # write the agent parameters
     agent_params = {
@@ -393,7 +400,8 @@ async def start_agent(request: Request):
         "predictors" : predictor_cols,
         "target_var" : target_var,
         "offset_var" : offset_var,
-        "prompt" : str(modeling_prompt)
+        "prompt" : str(modeling_prompt),
+        "custom_prompt" : custom_prompt or ""
     }    
     with open(work_dir / "agent_params.json", "w") as fh:
         json.dump(agent_params, fh)
@@ -425,7 +433,6 @@ async def poll_agent(request: Request):
     })
 
 # --- Configure server routes ---
-
 routes = [
     Route("/", default_handler, methods=["GET", "POST"]),
     Route("/data", data, methods=["GET", "POST"]),
