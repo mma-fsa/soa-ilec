@@ -2,11 +2,14 @@ import json
 import os
 import re
 import copy
+import sqlglot
+from datetime import date
 from pathlib import Path
 from collections import defaultdict, deque
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from env_vars import COMMON_TEMPLATE_DIR
 from urllib.parse import quote
+from abc import ABC, abstractmethod
 
 PTR_PATTERN = re.compile(r'^"([A-Za-z0-9-]+)"->"([A-Za-z0-9-]+)"$')
 
@@ -277,22 +280,36 @@ class AuditLogEntry:
             "result" : result
         }
 
-    
-class AuditLogRenderer:
 
+class AbstractRenderer(ABC):
+    
     def __init__(self, mcp_work_dir):
-        
         self.mcp_work_dir = Path(mcp_work_dir)
-        
+
         if not self.mcp_work_dir.exists():
-            raise FileNotFoundError(f"{mcp_work_dir} does not exist")
-        
+            raise FileNotFoundError(f"{self.mcp_work_dir} does not exist")
+
         self.agent_name = self.mcp_work_dir.name
         self.audit_log_data = self.mcp_work_dir / "final.json"
 
         if not self.audit_log_data.exists():
-            raise FileNotFoundError(f"final.json does not exist in {mcp_work_dir}")
+            raise FileNotFoundError(
+                f"final.json does not exist in {self.mcp_work_dir}"
+            )
+        
+    @abstractmethod
+    def render(self):
+        pass
+        
+    @staticmethod
+    def _pretty_sql(raw_sql):
+        sql = sqlglot.transpile(raw_sql, read="duckdb", write="duckdb", pretty=True)[0]
+        return "\n".join(list(map(lambda l: "# " + l, sql.split("\n")))) 
+    
+class AuditLogRenderer(AbstractRenderer):
 
+    def __init__(self, mcp_work_dir):
+        super().__init__(mcp_work_dir)
 
     def render(self):
 
@@ -312,7 +329,10 @@ class AuditLogRenderer:
         env = Environment(
             loader=FileSystemLoader(COMMON_TEMPLATE_DIR),
             autoescape=select_autoescape(["html", "xml"])
-        )        
+        )
+        
+        env.filters["pretty_sql"] = lambda x: self._pretty_sql(x) if x else ""
+        
         audit_template = env.get_template("audit_log.html")        
         safe_agent_name = quote(self.agent_name, safe="")
 
@@ -324,3 +344,107 @@ class AuditLogRenderer:
                 ("All Modeling Commands", full_cmd_log_by_time)
             ]            
         )
+
+class ModelNotebookRenderer(AbstractRenderer):
+
+    def __init__(self, mcp_work_dir):
+        super().__init__(mcp_work_dir)
+
+    def _prepare_template_data(self):
+        
+        with open(self.audit_log_data, "r") as fh:
+            audit_log_data = json.load(fh)
+        
+        final_model_data = audit_log_data["final_model_log"]
+        curr_node = final_model_data
+
+        # rparts before glmnet() are var_imp, after are model_validation
+        is_var_imp = True
+        datasets = []
+        var_imp = []
+        cmd_model = None
+        model_validation = []
+        model_inference = []
+
+        while curr_node is not None and "next" in curr_node:
+            
+            is_child_node = (
+                curr_node["type"] == AuditLogReader.NODE_TYPE_CHILD
+            )
+            
+            if is_child_node and "entry" in curr_node:
+                node_entry = curr_node["entry"]
+                cmd_name = node_entry["tool_name"] 
+                node_args = node_entry["args"]
+                if cmd_name == "cmd_create_dataset":
+                    cmd = {
+                        "name": node_args[0], 
+                        "sql" : self._pretty_sql(node_args[1])
+                    }
+                    datasets.append(cmd)
+                elif cmd_name == "cmd_rpart":
+                    cmd = {
+                        "dataset" : node_args[0],
+                        "x_vars" : node_args[1],
+                        "offset_var" : node_args[2],
+                        "y_var" : node_args[3],
+                        "max_depth" : node_args[4],
+                        "cp" : node_args[5]
+                    }
+                    if is_var_imp:
+                        var_imp.append(cmd)
+                    else:
+                        model_validation.append(cmd)
+                elif cmd_name == "cmd_run_inference":
+                    cmd = {
+                        "in_dataset" : node_args[0],
+                        "out_dataset" : node_args[1]
+                    }
+                    model_inference.append(cmd)
+                elif cmd_name == "cmd_glmnet":
+                    is_var_imp = False
+                    cmd_model = {
+                        "dataset": node_args[0],
+                        "x_vars" : node_args[1],
+                        "design_matrix_vars" : node_args[2],
+                        "factor_vars_levels": node_args[3],
+                        "num_var_clip" : node_args[4],
+                        "offset_var" : node_args[5],
+                        "y_var" : node_args[6],
+                        "lambda_strat" : node_args[7]
+                    }
+            
+            curr_node = curr_node["next"]
+
+        doc = {
+            "title": "Model Output",
+            "date" : date.today().strftime("%Y-%m-%d")
+        }
+
+        cmds = {
+            "datasets": datasets,
+            "cmd_model" : cmd_model,
+            "var_imp" : var_imp,
+            "model_validation" : model_validation,
+            "model_inference" : model_inference
+        }
+
+        return doc, cmds
+
+    def render(self):
+        
+        env = Environment(
+            loader=FileSystemLoader(COMMON_TEMPLATE_DIR),
+            autoescape=select_autoescape()
+        )
+        
+        template = env.get_template("model_output.Rmd")
+
+        doc, cmds = self._prepare_template_data()
+
+        tmpl_out = template.render(
+            doc = doc,
+            cmds = cmds
+        )
+        
+        return tmpl_out

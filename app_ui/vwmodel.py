@@ -207,6 +207,7 @@ class AgentViewModel:
             "model_factors" : quote(f"/export/{agent_name_safe}/model_factors", safe="/"),
             "agent_response" : quote(f"/export/{agent_name_safe}/agent_response", safe="/"),
             "audit_response" : quote(f"/export/{agent_name_safe}/audit_response", safe="/"),
+            "model_files" : quote(f"/export/{agent_name_safe}/model_files", safe="/"),
             "model_pred" : "/data?q=" + quote(final_sql, safe="")
         }
 

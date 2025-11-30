@@ -8,7 +8,7 @@ POST to:
   http://127.0.0.1:8000/mcp
 """
 
-import time, re, uuid, json, shutil
+import time, re, uuid, json, shutil, zipfile
 from typing import Any, Dict, List
 from starlette.responses import PlainTextResponse
 from mcp.server.fastmcp import FastMCP, Context
@@ -24,7 +24,7 @@ from prompt import SQL_SCHEMA_DESC, SQL_RUN_DESC, CMD_INIT_DESC, CMD_CREATE_DATA
     CMD_RUN_INFERENCE_DESC, CMD_RPART_DESC, CMD_GLMNET_DESC, CMD_FINALIZE_DESC
 
 # for finalize()
-from audit import AuditLogReader
+from audit import AuditLogReader, ModelNotebookRenderer
 
 # ---- Default R environment setup ----
 def create_REnv(workspace_id, no_cmd=False):
@@ -303,9 +303,12 @@ def cmd_finalize(workspace_id) -> Dict[str , Any]:
     final_workspace_id = None
     r_env = create_REnv(workspace_id)        
     final_workspace_id = r_env.workspace_id
+    
+    # path to the previous workspace
+    last_ws = workspace_dir / Path(f"workspace_{workspace_id}")
 
     # export the final model factors    
-    model_rds_path = workspace_dir / Path(f"workspace_{workspace_id}") / Path(f"run_model.rds")
+    model_rds_path = last_ws / Path(f"run_model.rds")
     if not model_rds_path.exists() or not model_rds_path.is_file():
         raise Exception("Cannot find model, has cmd_glmnet() been called?")
     RCmd.run_command(
@@ -341,13 +344,29 @@ def cmd_finalize(workspace_id) -> Dict[str , Any]:
         img_dir.mkdir(exist_ok=True)
 
     for i in list(workspace_dir.rglob("*.png")):
-
         ws_dir = i.parent.name
-
         if ws_dir.startswith("workspace_"):
             _, ws_id = ws_dir.split("_")
             img_path = img_dir / f"{ws_id}.png"
             shutil.copy(i, img_path)
+    
+    # create the Rmd file
+    rmd_renderer = ModelNotebookRenderer(workspace_dir)
+    rmd_path = workspace_dir / "final_model.Rmd" 
+    with open(rmd_path, "w") as fh:
+        fh.write(rmd_renderer.render())
+    
+    # other modeling files
+    pq_files = last_ws.glob("*.parquet")
+    
+    # create the archive w/ data + rmd + rds
+    with zipfile.ZipFile(workspace_dir / "model.zip", "w", zipfile.ZIP_DEFLATED) as zf:    
+        for fp in pq_files:
+            fp = Path(fp)
+            zf.write(fp, arcname=fp.name)
+        
+        zf.write(rmd_path, arcname=rmd_path.name)
+        zf.write(model_rds_path, arcname=model_rds_path.name)            
     
     return {
         "workspace_id": final_workspace_id, 

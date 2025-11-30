@@ -164,6 +164,7 @@ async def agent(request: Request):
             view_data["link_agent_response"] = artifact_links["agent_response"]
             view_data["link_audit_response"] = artifact_links["audit_response"]
             view_data["link_model_pred"] = artifact_links["model_pred"]
+            view_data["link_model_files"] = artifact_links["model_files"]
 
         if request.method == "POST":
             selected_view = str(form_data["param_selected_view"]).strip()            
@@ -219,6 +220,7 @@ async def export_artifact(request):
         "model_factors": "model_factors.xlsx",
         "agent_response": "response.md",
         "audit_response": "audit.html",
+        "model_files" : "model_files.zip"
     }
 
     agent_name = request.path_params["agent_name"]
@@ -252,6 +254,8 @@ async def export_artifact(request):
             mime = "text/markdown; charset=utf-8"
         elif artifact_path.suffix.lower() == ".xlsx":
             mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        elif artifact_path.suffix.lower() == ".zip":
+            mime = "application/zip"
         else:
             mime = "application/octet-stream"
 
@@ -264,9 +268,9 @@ async def export_artifact(request):
     return FileResponse(
         path=str(artifact_path),
         media_type=mime,
-        filename=download_name,                   # Starlette >= 0.27
+        filename=download_name,                   
         content_disposition_type="attachment",
-        headers=headers,
+        headers=headers
     )
 
 # --- Routes for js async (XmlHttpRequest) ---
@@ -429,7 +433,6 @@ async def poll_agent(request: Request):
     })
 
 # --- Configure server routes ---
-
 routes = [
     Route("/", default_handler, methods=["GET", "POST"]),
     Route("/data", data, methods=["GET", "POST"]),
