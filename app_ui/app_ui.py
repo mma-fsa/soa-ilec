@@ -220,7 +220,7 @@ async def export_artifact(request):
         "model_factors": "model_factors.xlsx",
         "agent_response": "response.md",
         "audit_response": "audit.html",
-        "model_files" : "model_files.zip"
+        "model_files" : "model.zip"
     }
 
     agent_name = request.path_params["agent_name"]

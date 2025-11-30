@@ -1,8 +1,8 @@
 install_if_missing <- function(all_pkgs) { 
   for (pkg_name in all_pkgs) {
-    if (!require(pkg_name)) {
+    if (!require(pkg_name, character.only=T)) {
       install.packages(pkg_name)
-      require(pkg_name)
+      require(pkg_name, character.only=T)
     }  
   }
 }

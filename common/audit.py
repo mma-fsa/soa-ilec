@@ -302,9 +302,12 @@ class AbstractRenderer(ABC):
         pass
         
     @staticmethod
-    def _pretty_sql(raw_sql):
+    def _pretty_sql(raw_sql, as_comment=False):
         sql = sqlglot.transpile(raw_sql, read="duckdb", write="duckdb", pretty=True)[0]
-        return "\n".join(list(map(lambda l: "# " + l, sql.split("\n")))) 
+        if as_comment:
+            return "\n".join(list(map(lambda l: "# " + l, sql.split("\n")))) 
+        else:
+            return sql
     
 class AuditLogRenderer(AbstractRenderer):
 
@@ -379,7 +382,7 @@ class ModelNotebookRenderer(AbstractRenderer):
                 if cmd_name == "cmd_create_dataset":
                     cmd = {
                         "name": node_args[0], 
-                        "sql" : self._pretty_sql(node_args[1])
+                        "sql" : self._pretty_sql(node_args[1], as_comment=True)
                     }
                     datasets.append(cmd)
                 elif cmd_name == "cmd_rpart":
