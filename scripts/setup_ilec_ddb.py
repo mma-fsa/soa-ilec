@@ -66,7 +66,49 @@ try:
 except Exception as e:
     print(f"An error occurred: {e}")
 
+## Sample View Query
+sample_vw_query = """
+CREATE VIEW UL_MODEL_DATA_SMALL AS
+WITH obs_data AS (
+  SELECT
+    Sex AS Gender,
+    Attained_Age,
+    Smoker_Status,
+    DEATH_COUNT AS Number_Of_Deaths,
+    ExpDth_VBT2015wMI_Cnt AS ExpDeathQx2015VBTwMI_byPol,
+    CASE WHEN (
+      (
+        Observation_Year < 2016
+      )
+    ) THEN (
+      'TRAIN'
+    ) ELSE 'TEST' END AS DATASET
+  FROM ILEC_DATA
+  WHERE
+    (
+      Insurance_Plan = 'UL'
+    )
+)
+SELECT
+  DATASET,
+  Gender,
+  Attained_Age,
+  Smoker_Status,
+  SUM(COALESCE(Number_Of_Deaths, 0)) AS Number_Of_Deaths,
+  SUM(COALESCE(ExpDeathQx2015VBTwMI_byPol, 0)) AS ExpDeathQx2015VBTwMI_byPol
+FROM obs_data
+GROUP BY
+  DATASET,
+  Gender,
+  Attained_Age,
+  Smoker_Status
+"""
 
+try:
+    con.execute(sample_vw_query)
+    print("Created UL_MODEL_DATA_SMALL")
+except Exception as e:
+    print(f"An error occurred: {e}")
 
 
 # Close the connection
