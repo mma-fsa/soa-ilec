@@ -1,0 +1,617 @@
+---
+title: "Model Output"
+author: "MMAgent"
+date: "2024-06-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+install_if_missing <- function(all_pkgs) { 
+  for (pkg_name in all_pkgs) {
+    if (!require(pkg_name, character.only = T)) {
+      install.packages(pkg_name)
+      require(pkg_name, character.only = T)
+    }  
+  }
+}
+
+# these packages will be installed if they are missing,
+# and then loaded into the RSession
+install_if_missing(c(
+  "glmnet",
+  "recipes",
+  "butcher",
+  "carrier",
+  "rpart",
+  "rpart.plot",
+  "rsample",
+  "arrow",
+  "splines",
+  "splines2",
+  "tidyverse"
+))
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+
+## Setup Data
+
+Should contain both a test and train split.
+
+```{r data-setup}
+
+# SELECT
+#   DATASET,
+#   NUMBER_OF_DEATHS,
+#   EXPDEATHQX2015VBTWMI_BYPOL,
+#   ATTAINED_AGE,
+#   GENDER,
+#   SMOKER_STATUS,
+#   PREFERRED_CLASS,
+#   FACE_AMOUNT_BAND,
+#   NUMBER_OF_PREFERRED_CLASSES
+# FROM V_FUW_UL
+# WHERE
+#   DATASET = 'TRAIN' AND EXPDEATHQX2015VBTWMI_BYPOL > 0
+model_data_train <- arrow::read_parquet("model_data_train.parquet")
+
+# SELECT
+#   DATASET,
+#   NUMBER_OF_DEATHS,
+#   EXPDEATHQX2015VBTWMI_BYPOL,
+#   ATTAINED_AGE,
+#   GENDER,
+#   SMOKER_STATUS,
+#   PREFERRED_CLASS,
+#   FACE_AMOUNT_BAND,
+#   NUMBER_OF_PREFERRED_CLASSES
+# FROM V_FUW_UL
+# WHERE
+#   DATASET = 'TEST' AND EXPDEATHQX2015VBTWMI_BYPOL > 0
+model_data_test <- arrow::read_parquet("model_data_test.parquet")
+
+```
+
+## Initial A/E Check
+
+This is used for variable importance in the `glmnet` model. We should expect
+variables that appear higher in the tree to be important variables for the 
+GLM.
+
+### Check variable importances
+    
+```{r}
+
+x_vars <- c(
+  'ATTAINED_AGE',
+  'GENDER',
+  'SMOKER_STATUS',
+  'PREFERRED_CLASS',
+  'FACE_AMOUNT_BAND')
+
+offset_var <- "EXPDEATHQX2015VBTWMI_BYPOL"
+y_var <- "NUMBER_OF_DEATHS"
+
+# aggregate the data, can be much faster to fit rpart
+rpart_data <- model_data_train %>%
+  group_by(across(all_of(x_vars))) %>%
+  summarise(
+    offset = sum(!!sym(offset_var)),
+    y = sum(!!sym(y_var)),
+    .groups = "drop"
+  ) %>%
+  ungroup() %>%
+  collect() %>%
+  mutate(across(where(is.character), as.factor))
+
+# create the rpart formula
+rpart_formula <- update(reformulate(x_vars), cbind(offset, y) ~ .)
+
+# fit the model
+fit_rpart <- rpart(
+    rpart_formula,
+    rpart_data,
+    method="poisson",
+    control = rpart.control(
+      cp = 0.001,
+      maxdepth = 4
+    )
+  )
+
+rpart.plot(
+    fit_rpart,
+    type = 2,          # split labels on branches, leaf nodes as boxes    
+    faclen = 0,        # don’t truncate factor levels
+    cex = 0.8,         # global text size
+    tweak = 0.90,      # box size tweak
+    digits = 3         # number of decimal digits
+  )
+
+```
+    
+```{r}
+
+x_vars <- c(
+  'ATTAINED_AGE',
+  'GENDER',
+  'SMOKER_STATUS',
+  'PREFERRED_CLASS',
+  'NUMBER_OF_PREFERRED_CLASSES')
+
+offset_var <- "EXPDEATHQX2015VBTWMI_BYPOL"
+y_var <- "NUMBER_OF_DEATHS"
+
+# aggregate the data, can be much faster to fit rpart
+rpart_data <- model_data_train %>%
+  group_by(across(all_of(x_vars))) %>%
+  summarise(
+    offset = sum(!!sym(offset_var)),
+    y = sum(!!sym(y_var)),
+    .groups = "drop"
+  ) %>%
+  ungroup() %>%
+  collect() %>%
+  mutate(across(where(is.character), as.factor))
+
+# create the rpart formula
+rpart_formula <- update(reformulate(x_vars), cbind(offset, y) ~ .)
+
+# fit the model
+fit_rpart <- rpart(
+    rpart_formula,
+    rpart_data,
+    method="poisson",
+    control = rpart.control(
+      cp = 0.001,
+      maxdepth = 4
+    )
+  )
+
+rpart.plot(
+    fit_rpart,
+    type = 2,          # split labels on branches, leaf nodes as boxes    
+    faclen = 0,        # don’t truncate factor levels
+    cex = 0.8,         # global text size
+    tweak = 0.90,      # box size tweak
+    digits = 3         # number of decimal digits
+  )
+
+```
+
+## Fit the GLM
+
+### GLM Parameters
+
+```{r}
+
+# these variables will be used in the fit
+x_vars <- c(
+  'ATTAINED_AGE',
+  'GENDER',
+  'SMOKER_STATUS',
+  'PREFERRED_CLASS',
+  'FACE_AMOUNT_BAND',
+  'NUMBER_OF_PREFERRED_CLASSES')
+
+# response and offset
+offset_var <- "EXPDEATHQX2015VBTWMI_BYPOL"
+y_var <- "NUMBER_OF_DEATHS"
+
+# this defines the model
+design_matrix_vars <- c(
+  'splines::ns(ATTAINED_AGE, knots=c(65.5,80), Boundary.knots=c(20,90))',
+  'GENDER',
+  'SMOKER_STATUS',
+  'PREFERRED_CLASS',
+  'FACE_AMOUNT_BAND',
+  'NUMBER_OF_PREFERRED_CLASSES',
+  'splines::ns(ATTAINED_AGE, knots=c(65.5,80), Boundary.knots=c(20,90)):FACE_AMOUNT_BAND',
+  'splines::ns(ATTAINED_AGE, knots=c(65.5,80), Boundary.knots=c(20,90)):PREFERRED_CLASS',
+  'GENDER:FACE_AMOUNT_BAND',
+  'GENDER:SMOKER_STATUS',
+  'SMOKER_STATUS:FACE_AMOUNT_BAND',
+  'PREFERRED_CLASS:FACE_AMOUNT_BAND',
+  'SMOKER_STATUS:PREFERRED_CLASS')
+
+# this defines the "default" level of each factor variable
+factor_vars_levels <- list(
+  'GENDER'='Male',
+  'SMOKER_STATUS'='NonSmoker',
+  'PREFERRED_CLASS'='2',
+  'FACE_AMOUNT_BAND'='100000-249999',
+  'NUMBER_OF_PREFERRED_CLASSES'='2')
+
+# clips numeric variables to prevent nonsensical extrapolation
+num_var_clip <- list(
+  'ATTAINED_AGE'=c(20, 90))
+
+```
+
+### Aggregate the training data
+
+Helps w/ fitting runtime, without loss of predictiveness.
+
+```{r}
+
+glmnet_data <- model_data_train %>%
+  group_by(across(all_of(x_vars))) %>%
+  summarise(
+    offset = sum(!!sym(offset_var)),
+    y = sum(!!sym(y_var)),
+    .groups = "drop"
+  ) %>%
+  ungroup()
+
+# check that offset / exposure is non-zero
+num_zero_expos <- glmnet_data %>%
+  filter(coalesce(offset, 0.0) <= 0) %>%
+  nrow()
+
+if (num_zero_expos > 0) {
+  stop("Detected model data rows w/ zero or NA exposure")
+}
+
+```
+
+### Create the preprocessing step
+
+The data is preprocessed before fitting and inference using the following steps:
+
+* Convert string variables to R factors
+
+* If there is a "default" level specified for a factor, 
+
+```{r}
+
+# create the preprocessor formula
+recipe_rhs <- reformulate(x_vars)
+recipe_formula <- update(recipe_rhs, y ~ .)  
+
+# init the preprocessor (recipe)
+prep_glmnet_data <- recipe(
+    recipe_formula,
+    data=glmnet_data)
+  
+# get a list of all character variables in x_vars,
+# need to map them to factors
+char_vars <- glmnet_data %>%
+  select(all_of(x_vars)) %>%
+  select(where(is.character)) %>%
+  colnames()
+
+# check that factor_vars are all in char_var using set_diff
+invalid_factors <- setdiff(names(factor_vars_levels), char_vars)
+if (length(invalid_factors) > 0) {
+  bad_factors <- paste0(invalid_factors, collapse=",")
+  stop(sprintf("Invalid factor names: %s", bad_factors))
+}
+
+training_data_vals <- list()
+
+# convert strings to factors using step_string2factor, 
+# use the default level if it is present in the factor_vars_levels
+for (cv in char_vars) {
+  
+  default_level <- factor_vars_levels[[cv]]
+  unique_values <- unique(glmnet_data[[cv]])
+  
+  if (length(unique_values) > 25) {
+    stop(sprintf("Error: %s has more than 25 levels", cv))
+  }
+  
+  if (!is.null(default_level)) {
+    var_levels = c(default_level, setdiff(unique_values, default_level))
+  } else {
+    var_levels = sort(unique_values)
+  }
+  
+  training_data_vals[[cv]] <- var_levels
+  
+  prep_glmnet_data <- prep_glmnet_data %>%      
+    step_mutate(!!cv := as.character(!!sym(cv))) %>%
+    step_string2factor(!!sym(cv), levels = var_levels)
+}
+
+# get a list of numeric / non-character variables in x_vars
+numeric_vars <- glmnet_data %>%
+  select(all_of(x_vars)) %>%
+  select(where(is.numeric)) %>%
+  colnames()
+
+# apply a numeric clip to max min of all numeric_vars using the ranges in the
+# training data, prevents issues with splines in formula
+for (nv in numeric_vars) {
+  
+  var_range <- range(glmnet_data[[nv]], na.rm=TRUE)
+  
+  # only respect the clipping if they are within min / max of training data
+  if (nv %in% names(num_var_clip)) {
+    var_range <- c(
+      pmax(var_range[1], num_var_clip[[nv]][1]),
+      pmin(var_range[2], num_var_clip[[nv]][2])
+    )
+  } 
+  
+  # assume integer
+  training_data_vals[[nv]] <- c(var_range[1], var_range[2])
+  
+  min_val <- var_range[1]
+  max_val <- var_range[2]
+  
+  prep_glmnet_data <- prep_glmnet_data %>%
+    step_mutate(
+      !!rlang::sym(nv) := pmax(!!min_val,
+                               pmin(!!max_val, !!rlang::sym(nv)))
+    )
+}
+
+prep_glmnet_data <- prep_glmnet_data %>%
+  prep(glmnet_data, retain=F)
+
+print(prep_glmnet_data)
+
+```
+
+### Fit the model w/ GLMNet
+
+```{r}
+
+# apply transformations before building design matrix
+glmnet_data.prepped <- bake(prep_glmnet_data, glmnet_data)
+
+# create design matrix + response & offset vectors, no intercept
+# since this is handled by glmnet
+dmat_rhs <- reformulate(design_matrix_vars)
+dmat_formula <- update(dmat_rhs, ~ . - 1)  
+
+# build design matrix, response, and offset vectors
+X_mat <- model.matrix(dmat_formula, data = glmnet_data.prepped)
+y_vec <- glmnet_data$y
+offset_vec <- log(glmnet_data$offset)
+
+# run GLMNET
+fit_glmnet <- glmnet::glmnet(
+  X_mat,
+  y_vec,
+  family = "poisson",
+  offset = offset_vec,
+  nlambda = 100
+)
+
+plot(
+  seq(1, length(fit_glmnet$lambda)),
+  fit_glmnet$dev.ratio,
+  type="l",
+  xlab = "Lambda #",
+  ylab = "dev.ratio"
+)
+
+```
+
+### Identify the best lambda
+
+```{r}
+
+lambda_strat <- "1se"
+
+if (lambda_strat == "1se") {
+    
+  # use the top 50% deviance ratios to compute the standard deviations
+  n_fit_lambdas <- length(fit_glmnet$dev.ratio)
+  best_dev_ratios <- fit_glmnet$dev.ratio[as.integer(n_fit_lambdas/2):n_fit_lambdas]
+  sd_dev_ratios <- sd(log(best_dev_ratios))
+  
+  best_dev_ratio_1se <- exp(log(max(best_dev_ratios)) - sd_dev_ratios)
+  best_lambda_idx <- max(which(fit_glmnet$dev.ratio <= best_dev_ratio_1se))
+    
+} else if (lambda_strat %in% c("AIC", "BIC")) {
+  # not 100% sure the math checks out here...
+  compute_AIC_BIC <- function(fit){
+    tLL <- -deviance(fit)
+    k <- dim(X_mat)[2]
+    n <- sum(y_vec)
+    fit_AIC <- -tLL+2*k
+    fit_BIC <- log(n)*k - tLL
+    return(list(
+      "AIC" = fit_AIC,
+      "BIC" = fit_BIC
+    ))
+  }
+  strat_criteria <- compute_AIC_BIC(fit_glmnet)[[lambda_strat]]
+  best_lambda_idx <- which(
+    strat_criteria == min(strat_criteria)
+  )
+} else {
+  stop("Unknown lambda strategy: %s", lambda_strat)
+}
+
+# select best lambda based on criteria
+best_lambda <- fit_glmnet$lambda[best_lambda_idx]
+
+# plot the best lambda vs. deviance ratio
+plot(
+  seq(1, length(fit_glmnet$lambda)),
+  fit_glmnet$dev.ratio,
+  type="l",
+  xlab = "Lambda #",
+  ylab = "dev.ratio"
+)
+points(best_lambda_idx, fit_glmnet$dev.ratio[best_lambda_idx], col="red")
+
+```
+
+### Bundle-up model into a function (crate)
+
+```{r}
+
+# bundle up model into carrier crate. this can be cleanly saved to an RDS file 
+run_model <- carrier::crate(function(df, use_offset = T, pred_type="response") {
+    
+    df_prepped <- recipes::bake(prep_glmnet_data, df)
+    X_mat <- stats::model.matrix(dmat_formula, df_prepped)
+    
+    if (use_offset) {
+      pred_vec <- stats::predict(
+        fit_glmnet,
+        X_mat,
+        newoffset = log(df[[offset_var]]),
+        s = best_lambda,
+        type = pred_type
+      )
+    } else {
+      pred_vec <- stats::predict(
+        fit_glmnet,
+        X_mat,
+        s = best_lambda,
+        type = pred_type
+      )
+    }
+    return(as.double(pred_vec))
+  },
+  prep_glmnet_data = prep_glmnet_data,
+  fit_glmnet = fit_glmnet,
+  offset_var = offset_var,
+  dmat_formula = dmat_formula,
+  best_lambda = best_lambda,    
+  training_data_vals = training_data_vals,
+  args = list(
+    "x_vars" = x_vars, 
+    "design_matrix_vars" = design_matrix_vars, 
+    "factor_vars_levels" = factor_vars_levels, 
+    "num_var_clip" = num_var_clip, 
+    "offset_var" = offset_var, 
+    "y_var" = y_var, 
+    "lambda_strat" = lambda_strat
+  )
+)
+
+```
+
+### Run Inference on training / testing dataset
+
+```{r}
+
+# sanity checks
+ae_check <- list()
+
+
+model_data_train_preds_v5 <- model_data_train
+model_data_train_preds_v5[["MODEL_PRED"]] <- run_model(model_data_train_preds_v5)
+ae_check[["model_data_train_preds_v5"]] <- (
+  sum(model_data_train_preds_v5[["NUMBER_OF_DEATHS"]]) / sum(model_data_train_preds_v5[["MODEL_PRED"]])
+)
+
+model_data_test_preds_v5 <- model_data_test
+model_data_test_preds_v5[["MODEL_PRED"]] <- run_model(model_data_test_preds_v5)
+ae_check[["model_data_test_preds_v5"]] <- (
+  sum(model_data_test_preds_v5[["NUMBER_OF_DEATHS"]]) / sum(model_data_test_preds_v5[["MODEL_PRED"]])
+)
+
+
+# sanity checks
+print(ae_check)
+
+```
+
+### Check inference with decision trees
+    
+```{r}
+
+x_vars <- c(
+  'ATTAINED_AGE',
+  'GENDER',
+  'SMOKER_STATUS',
+  'PREFERRED_CLASS',
+  'FACE_AMOUNT_BAND')
+
+offset_var <- "MODEL_PRED"
+y_var <- "NUMBER_OF_DEATHS"
+
+# aggregate the data, can be much faster to fit rpart
+rpart_data <- model_data_train_preds_v5 %>%
+  group_by(across(all_of(x_vars))) %>%
+  summarise(
+    offset = sum(!!sym(offset_var)),
+    y = sum(!!sym(y_var)),
+    .groups = "drop"
+  ) %>%
+  ungroup() %>%
+  collect() %>%
+  mutate(across(where(is.character), as.factor))
+
+# create the rpart formula
+rpart_formula <- update(reformulate(x_vars), cbind(offset, y) ~ .)
+
+# fit the model
+fit_rpart <- rpart(
+    rpart_formula,
+    rpart_data,
+    method="poisson",
+    control = rpart.control(
+      cp = 0.001,
+      maxdepth = 4
+    )
+  )
+
+rpart.plot(
+    fit_rpart,
+    type = 2,          # split labels on branches, leaf nodes as boxes    
+    faclen = 0,        # don’t truncate factor levels
+    cex = 0.8,         # global text size
+    tweak = 0.90,      # box size tweak
+    digits = 3         # number of decimal digits
+  )
+
+```
+    
+```{r}
+
+x_vars <- c(
+  'ATTAINED_AGE',
+  'GENDER',
+  'SMOKER_STATUS',
+  'PREFERRED_CLASS',
+  'FACE_AMOUNT_BAND')
+
+offset_var <- "MODEL_PRED"
+y_var <- "NUMBER_OF_DEATHS"
+
+# aggregate the data, can be much faster to fit rpart
+rpart_data <- model_data_test_preds_v5 %>%
+  group_by(across(all_of(x_vars))) %>%
+  summarise(
+    offset = sum(!!sym(offset_var)),
+    y = sum(!!sym(y_var)),
+    .groups = "drop"
+  ) %>%
+  ungroup() %>%
+  collect() %>%
+  mutate(across(where(is.character), as.factor))
+
+# create the rpart formula
+rpart_formula <- update(reformulate(x_vars), cbind(offset, y) ~ .)
+
+# fit the model
+fit_rpart <- rpart(
+    rpart_formula,
+    rpart_data,
+    method="poisson",
+    control = rpart.control(
+      cp = 0.001,
+      maxdepth = 4
+    )
+  )
+
+rpart.plot(
+    fit_rpart,
+    type = 2,          # split labels on branches, leaf nodes as boxes    
+    faclen = 0,        # don’t truncate factor levels
+    cex = 0.8,         # global text size
+    tweak = 0.90,      # box size tweak
+    digits = 3         # number of decimal digits
+  )
+
+```

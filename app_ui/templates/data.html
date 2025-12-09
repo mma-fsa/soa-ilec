@@ -91,13 +91,13 @@
           </div>
           <div class="d-flex align-items-center gap-2 mt-3">
             <button id="run-btn" name="run_query" class="btn btn-primary">Run Query</button>
+            <span id="hint_readonly_checked" class="text-muted ms-auto small">
+              Only <code>SELECT ... FROM </code> is allowed (read only).
+            </span>            
             <fieldset class="text-muted ms-auto small">
               <label>Read only:</label>
-              <input name="read_only" type="checkbox" checked>
-            </fieldset>
-            <span id="hint_readonly_checked" class="text-muted ms-auto small">
-              Only <code>SELECT ... FROM </code> is allowed.
-            </span>
+              <input id="chk_read_only" name="read_only" type="checkbox" checked>
+            </fieldset>            
           </div>
         </form>
       </div>
@@ -167,7 +167,16 @@
   }
 </script>
 {% endif %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
 <script>  
+  $("#chk_read_only").change(function(e) {
+    if ($(this).is(":checked")) {
+      $("#hint_readonly_checked").show()
+    } else {
+      $("#hint_readonly_checked").hide()
+    }
+  })
+
   function run_export(export_type) {
 
       const form = document.getElementById("query_params");

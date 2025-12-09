@@ -1,0 +1,53 @@
+---
+title: "Untitled"
+author: "Mike McPhee Anderson, FSA"
+date: "2025-10-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+library(DBI)
+library(duckdb)
+library(rpart)
+library(tidyverse)
+
+AGENT_LIB = "~/workspace/soa-ilec/soa-ilec/mcp/ilec_r_lib.R"
+EXPORT_LIB = "~/workspace/soa-ilec/soa-ilec/mcp/ilec_r_lib.R"
+
+source(AGENT_LIB)
+
+```
+
+## Setup database connection
+
+```{r}
+
+ddb_path <- "/home/mike/workspace/soa-ilec/soa-ilec/data/ilec_data.duckdb"
+
+if (!exists("conn")) {
+  conn <- DBI::dbConnect(duckdb::duckdb(ddb_path, read_only = T))
+  DBI::dbExecute(conn, "set memory_limit='4GB'")
+}
+
+tbl(conn, "ILEC_DATA") %>%
+  head(10) %>%
+  collect()
+
+
+```
+
+## Test Model Finalization
+
+```{r}
+
+setwd("/home/mike/workspace/soa-ilec/soa-ilec/data/workspaces/cs_model_1/workspace_e8809773-59b2-4b86-b4e4-a51f9072f109/")
+source("/home/mike/workspace/soa-ilec/soa-ilec/mcp/model_export_lib.R")
+
+export_location <- "/home/mike/workspace/soa-ilec/soa-ilec/data/workspaces/cs_model_1/"
+
+export_factors(conn, model_rds_path, export_location, "V_FUW_UL")
+
+```
+
+
