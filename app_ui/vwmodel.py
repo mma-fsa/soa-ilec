@@ -2,7 +2,7 @@ from urllib.parse import quote
 from app_shared import Database
 from audit import AuditLogReader
 from env_vars import DEFAULT_DATA_EXPORT_DIR, DEFAULT_AGENT_WORK_DIR
-import uuid, json
+import uuid, json, re
 import pandas as pd
 from pathlib import Path
 from operator import itemgetter
@@ -69,10 +69,12 @@ class DataViewModel:
         filetype = filetype.lower().strip()
         export_path = self.export_dir / Path(f"export_{file_uuid}.{filetype}")
 
+        clean_query = re.sub(r';+\s*$', '', query, flags=re.MULTILINE)
+
         if filetype == "parquet":
-            export_query = f"copy({query}) to '{export_path}' (FORMAT PARQUET, ROW_GROUP_SIZE 100000)"
+            export_query = f"copy({clean_query}) to '{export_path}' (FORMAT PARQUET, ROW_GROUP_SIZE 100000)"
         elif filetype == "csv":
-            export_query = f"copy({query}) to '{export_path}' "\
+            export_query = f"copy({clean_query}) to '{export_path}' "\
                 """(HEADER, DELIMITER ',', QUOTE '"', ESCAPE '"', """\
                 """NULL '', DATEFORMAT '%Y-%m-%d', TIMESTAMPFORMAT '%Y-%m-%d %H:%M:%S')"""
         else:

@@ -1,0 +1,155 @@
+---
+title: "Untitled"
+author: "Mike McPhee Anderson, FSA"
+date: "2025-12-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+library(arrow)
+library(tidyverse)
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Gather up model prediction parquets
+
+```{r}
+
+base_dir <- "~/workspace/soa-ilec/soa-ilec/data/workspaces/cs_model_oneshot/"
+
+model_pred_files <- list.files(
+  path = base_dir,
+  pattern="\\.parquet$",
+  recursive = T,
+  full.names = T
+) 
+
+df_model_pred_files <- tibble(
+  path = model_pred_files) %>%
+  mutate(
+    filename = fs::path_file(path)
+  ) %>%
+  filter(str_detect(filename, "preds")) %>%
+  filter(str_detect(filename, "test")) %>%
+  select(
+    filename,
+    path
+  ) %>%
+  group_by(filename) %>%
+  mutate(
+    dedup_idx = row_number()
+  ) %>%
+  filter(dedup_idx == 1) %>%
+  select(-dedup_idx) %>%
+  arrange(filename) 
+  
+df_model_pred_files
+
+```
+
+```{r}
+
+all_ll <- as.double(c())
+
+for (calc_idx in 1:nrow(df_model_pred_files)) {
+  
+  curr_file <- df_model_pred_files$path[calc_idx]
+  
+  df_model_data <- arrow::read_parquet(curr_file)
+  ll <- sum(dpois(df_model_data$NUMBER_OF_DEATHS, df_model_data$MODEL_PRED, log = T))
+  all_ll <- c(all_ll, ll)
+}
+
+plot(1:nrow(df_model_pred_files), all_ll, type="l")
+
+```
+
+
+
+```{r}
+
+df_export_csv <- df_model_pred_files
+df_model_pred_files[["ll"]] <- all_ll
+
+write_csv(df_export_csv, "/home/mike/workspace/soa-ilec/soa-ilec/notebooks/cs_oneshot_ll_test.csv")
+
+```
+
+
+## Gather the layered predictions
+
+```{r}
+
+df_layered_preds <- tribble(
+  ~run_name, ~pq_name,
+  "cs_model_1", "model_data_test_preds",
+  "cs_model_2", "model_data_test_preds",
+  "cs_model_2", "model_data_test_preds_round2",
+  "cs_model_3", "model_data_test_preds",
+  "cs_model_3", "model_data_test_preds_v2",
+  "cs_model_4", "model_data_test_preds",
+  "cs_model_4", "model_data_test_preds_v2",
+  "cs_model_5", "model_data_test_preds",
+  "cs_model_5", "model_data_test_v2_preds",
+  "cs_model_6", "model_data_test_preds",
+  "cs_model_6", "model_data_test_preds_r2",
+  "cs_model_6", "model_data_test_preds_r3",
+  "cs_model_6", "model_data_test_preds_r4",
+  "cs_model_6", "model_data_test_preds_r5",
+  "cs_model_6", "model_data_test_preds_r6"
+)
+
+df_layered_preds
+
+```
+
+```{r}
+
+base_ws_path <- "~/workspace/soa-ilec/soa-ilec/data/workspaces/"
+all_ll2 <- as.double(c())
+
+for (calc_idx in 1:nrow(df_layered_preds)) {
+
+  run_name <- df_layered_preds$run_name[calc_idx]
+  file_name <- df_layered_preds$pq_name[calc_idx]
+  
+  run_path <- paste0(base_ws_path, run_name, "/")
+  pq_name = paste0(file_name, "\\.parquet$")  
+
+  model_pred_files <- list.files(
+    path = run_path,
+    pattern=pq_name,
+    recursive = T,
+    full.names = T,
+  ) 
+
+  df_model_data <- arrow::read_parquet(model_pred_files[1])  
+  colnames(df_model_data) <- toupper(colnames(df_model_data))
+  
+  ll <- sum(dpois(df_model_data$NUMBER_OF_DEATHS, df_model_data$MODEL_PRED, log = T))
+  
+  all_ll2 <- c(all_ll2, ll)
+  
+}
+
+plot(1:nrow(df_layered_preds), all_ll2, type="l")
+
+```
+
+```{r}
+
+df_layered_preds[["ll"]] <- all_ll2
+
+write_csv(df_layered_preds, "/home/mike/workspace/soa-ilec/soa-ilec/notebooks/cs_layered_ll_test.csv")
+
+```
+
+
+```{r}
+
+max(all_ll2)
+
+```
+

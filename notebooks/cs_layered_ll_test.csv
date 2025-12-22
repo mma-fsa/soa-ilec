@@ -1,0 +1,16 @@
+run_name,pq_name,ll
+cs_model_1,model_data_test_preds,-9611.91853706997
+cs_model_2,model_data_test_preds,-9611.920370771928
+cs_model_2,model_data_test_preds_round2,-9590.012731241244
+cs_model_3,model_data_test_preds,-9590.012769384472
+cs_model_3,model_data_test_preds_v2,-9588.295774098486
+cs_model_4,model_data_test_preds,-9597.81906975433
+cs_model_4,model_data_test_preds_v2,-9597.990457102283
+cs_model_5,model_data_test_preds,-9589.230470344228
+cs_model_5,model_data_test_v2_preds,-9587.904760105743
+cs_model_6,model_data_test_preds,-9585.659932597602
+cs_model_6,model_data_test_preds_r2,-9583.73547970546
+cs_model_6,model_data_test_preds_r3,-9585.829743270824
+cs_model_6,model_data_test_preds_r4,-9582.348332060614
+cs_model_6,model_data_test_preds_r5,-9588.937191696234
+cs_model_6,model_data_test_preds_r6,-9589.079654986968

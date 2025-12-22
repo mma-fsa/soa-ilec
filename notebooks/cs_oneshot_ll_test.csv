@@ -1,0 +1,12 @@
+filename,path,ll
+model_data_test_preds_m01.parquet,/home/mike/workspace/soa-ilec/soa-ilec/data/workspaces/cs_model_oneshot//workspace_40d4de61-9c5f-4c21-8efc-2ea7c2fc9984/model_data_test_preds_m01.parquet,-9570.548134250734
+model_data_test_preds_m02.parquet,/home/mike/workspace/soa-ilec/soa-ilec/data/workspaces/cs_model_oneshot//workspace_1f860dfa-0c66-43f4-b12c-2932911cd142/model_data_test_preds_m02.parquet,-9572.149620217422
+model_data_test_preds_m03.parquet,/home/mike/workspace/soa-ilec/soa-ilec/data/workspaces/cs_model_oneshot//workspace_67154a8f-4784-436c-9fa0-432d22b8082a/model_data_test_preds_m03.parquet,-9571.063875406258
+model_data_test_preds_m04.parquet,/home/mike/workspace/soa-ilec/soa-ilec/data/workspaces/cs_model_oneshot//workspace_05a4e1af-35ad-4924-8821-2483c5c81604/model_data_test_preds_m04.parquet,-9572.100004388276
+model_data_test_preds_m05.parquet,/home/mike/workspace/soa-ilec/soa-ilec/data/workspaces/cs_model_oneshot//workspace_297c2d1c-d7f6-464c-b38e-a9f53d9a755e/model_data_test_preds_m05.parquet,-9569.402787255025
+model_data_test_preds_m06.parquet,/home/mike/workspace/soa-ilec/soa-ilec/data/workspaces/cs_model_oneshot//workspace_3dda965c-41c4-4458-8f71-7e788a0c324f/model_data_test_preds_m06.parquet,-9570.033933520608
+model_data_test_preds_m07.parquet,/home/mike/workspace/soa-ilec/soa-ilec/data/workspaces/cs_model_oneshot//workspace_0b579bd9-5f25-44d2-ad98-22155ec66f7c/model_data_test_preds_m07.parquet,-9572.93817515731
+model_data_test_preds_m08.parquet,/home/mike/workspace/soa-ilec/soa-ilec/data/workspaces/cs_model_oneshot//workspace_9da9bed5-cc50-4c11-a0c7-5197398c6c40/model_data_test_preds_m08.parquet,-9580.969446411282
+model_data_test_preds_m09.parquet,/home/mike/workspace/soa-ilec/soa-ilec/data/workspaces/cs_model_oneshot//workspace_55baef39-4b13-4964-9538-0e9416070d26/model_data_test_preds_m09.parquet,-9570.908996823431
+model_data_test_preds_m10.parquet,/home/mike/workspace/soa-ilec/soa-ilec/data/workspaces/cs_model_oneshot//workspace_2669d53a-617a-4d8a-8491-bd682026443d/model_data_test_preds_m10.parquet,-9566.480580287864
+model_data_test_preds_m11.parquet,/home/mike/workspace/soa-ilec/soa-ilec/data/workspaces/cs_model_oneshot//workspace_734eaa49-a1bb-4ef6-b9a8-30aa775f7426/model_data_test_preds_m11.parquet,-9568.630596510355
