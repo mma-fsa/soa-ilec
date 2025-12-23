@@ -407,8 +407,12 @@ async def start_agent(request: Request):
         json.dump(agent_params, fh)
 
     # prepare the audit log
-    audit_render = AuditLogRenderer(work_dir)
-    audit_response_html = audit_render.render()
+    try:
+        audit_render = AuditLogRenderer(work_dir)
+        audit_response_html = audit_render.render()
+    except:
+        audit_response_html = "<b>Cannot retrieve audit log, check agent response.</b>"
+        
     with open(work_dir / "audit.html", "w") as fh:
         fh.write(audit_response_html)
 

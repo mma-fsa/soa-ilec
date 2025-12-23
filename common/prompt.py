@@ -59,7 +59,7 @@ class ModelingPrompt:
             f"""First, call sql_schema() with '{model_data_vw}' as the table_name argument."""\
             f"""Use the column '{target_var}' as the target (y_var) and column '{offset_var}' as the offset (offset_var),"""\
                 """ including in calls to cmd_rpart() and cmd_glmnet()."""\
-            f"""If either the target or y_var columns are not present in '{model_data_vw}', fail and report your findings."""\
+            f"""If either the target or y_var columns are not present in '{model_data_vw}' (ignoring upper/lower case differences), or if the target and y_var columns are the same, fail and report your findings."""\
             f"""Perform exploratory data analysis on {model_data_vw} using sql_query(). Use the EDA results in model design when possible."""\
             f"""These columns in {model_data_vw} are all valid model features: {pred_str}."""\
              """You may perform basic feature engineering via binning continuous variables as categorical or ordinal, but nothing else."""\
