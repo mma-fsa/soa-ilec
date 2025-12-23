@@ -152,10 +152,6 @@ class AgentViewModel:
         with open(agent_dir / "agent_params.json", "r") as fh:
             agent_params = json.load(fh)        
         
-        # get the modeling log
-        final_data = None
-        with open(agent_dir / "final.json", "r") as fh:
-            final_data = json.load(fh)
         
         # get the response html
         response_html = None
@@ -166,6 +162,21 @@ class AgentViewModel:
         audit_log_html = None
         with open(agent_dir / "audit.html") as fh:
             audit_log_html = fh.read()
+        
+        model_finished = (agent_dir / "final.json").exists()
+        
+        if not model_finished:
+            return {
+                "model_finished" : model_finished,
+                "agent_params" : agent_params,
+                "agent_response" : response_html,
+                "audit_response" : audit_log_html
+            }
+            
+        # get the modeling log
+        final_data = None
+        with open(agent_dir / "final.json", "r") as fh:
+            final_data = json.load(fh)
         
         # scan the modeling log and create a query to access the model results
         final_model_log = final_data["final_model_log"]
@@ -214,6 +225,7 @@ class AgentViewModel:
         }
 
         return {
+            "model_finished" : model_finished,
             "agent_params" : agent_params,
             "agent_response" : response_html,
             "audit_response" : audit_log_html,

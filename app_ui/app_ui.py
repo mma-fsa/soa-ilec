@@ -146,6 +146,8 @@ async def agent(request: Request):
             # load the previous agent data
             agent_data = avm.get_agent_data(agent_name)
             
+            model_finished = agent_data["model_finished"]
+            
             # set agent parameters
             agent_params = agent_data["agent_params"]            
             selected_view = agent_params["model_data_vw"]
@@ -159,12 +161,20 @@ async def agent(request: Request):
             view_data["agent_response"] = agent_data["agent_response"]
             view_data["audit_response"] = agent_data["audit_response"]
             
-            artifact_links = agent_data["artifact_links"]            
-            view_data["link_model_factors"] = artifact_links["model_factors"]
-            view_data["link_agent_response"] = artifact_links["agent_response"]
-            view_data["link_audit_response"] = artifact_links["audit_response"]
-            view_data["link_model_pred"] = artifact_links["model_pred"]
-            view_data["link_model_files"] = artifact_links["model_files"]
+            if model_finished:
+                artifact_links = agent_data["artifact_links"]            
+                view_data["link_model_factors"] = artifact_links["model_factors"]
+                view_data["link_agent_response"] = artifact_links["agent_response"]
+                view_data["link_audit_response"] = artifact_links["audit_response"]
+                view_data["link_model_pred"] = artifact_links["model_pred"]
+                view_data["link_model_files"] = artifact_links["model_files"]
+            else:
+                error_msg = "javascript:alert('Agent failed, cannot export.')"
+                view_data["link_model_factors"] = error_msg
+                view_data["link_agent_response"] = error_msg
+                view_data["link_audit_response"] = error_msg
+                view_data["link_model_pred"] = error_msg
+                view_data["link_model_files"] = error_msg
 
         if request.method == "POST":
             selected_view = str(form_data["param_selected_view"]).strip()            
