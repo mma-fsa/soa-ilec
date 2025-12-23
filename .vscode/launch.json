@@ -57,8 +57,10 @@
             "type": "debugpy",
             "request": "launch",
             "module": "uvicorn",
-            "cwd": "${workspaceFolder}/app_ui", 
+            "cwd": "${workspaceFolder}", 
             "args": [
+                "--app-dir",
+                "./app_ui",
                 "app_ui:app",  // module path to your FastAPI app
                 "--reload",             // auto-reload on code changes
                 "--port", "8085",       // optional
