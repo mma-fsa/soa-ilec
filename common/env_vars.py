@@ -11,8 +11,10 @@ DEFAULT_DATA_DIR = Path("/home/mike/workspace/soa-ilec/soa-ilec/data/")
 DEFAULT_AGENT_WORK_DIR = DEFAULT_DATA_DIR / Path("workspaces/")
 
 DEFAULT_DDB_PATH = DEFAULT_DATA_DIR / Path("ilec_data.duckdb")
-DEFAULT_ILEC_PQ_LOCATION = DEFAULT_DATA_DIR / Path("ilec_2009_19_20210528.parquet")
 DEFAULT_DATA_EXPORT_DIR = DEFAULT_DATA_DIR / Path("exports")
+
+ILEC_DATA_URL = 'https://cdn-files.soa.org/research/ilec/ilec-mort-text-data-dict-2012-2019.zip'
+ILEC_IMPORT_FILE_NAME = 'ILEC_2012_19 - 20240429.txt'
 
 if not DEFAULT_DATA_EXPORT_DIR.exists():
     DEFAULT_DATA_EXPORT_DIR.mkdir(parents=True, exist_ok=True)
@@ -20,7 +22,7 @@ if not DEFAULT_DATA_EXPORT_DIR.exists():
 DEFAULT_SESS_DB_INIT_SQL = """CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)"""
 
 DEFAULT_DDB_INIT_SQL = "create view if not exists ILEC_DATA as "\
-    f"(select * from read_parquet('{DEFAULT_ILEC_PQ_LOCATION}'))"
+    f"(select * from ilec_mortality_raw'))"
 
 DEFAULT_DDB_ROW_LIMIT = 1000
 

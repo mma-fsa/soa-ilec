@@ -15,12 +15,13 @@ The easiest way to run MMAgent is via the [Google Colab Notebook](https://colab.
 
 ## Local Setup 
 
+**The code expects a Linux-like environment with rsync and unzip installed, it will not run on windows, and has not been tested on MacOS.**  If you do not have access to a Linux environment use [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install).
+
 1. Clone the repository
 2. Create a conda environment using the `environment.yml`
 3. Create a file containing (only) your openapi key
 4. Update `common/env_vars.py` to match your configuration.
-5. Download and unzip the [SOA ILEC Data](https://cdn-files.soa.org/research/ilec/ilec-mort-text-data-dict-2012-2019.zip).
-6. Update `scripts/setup_ilec_ddb.py` to match the ILEC data location.
+5. Run `setup_data.sh` (download ILEC data + setup duckdb)
 
 ## Running 
 
