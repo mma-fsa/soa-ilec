@@ -360,8 +360,17 @@ async def start_agent(request: Request):
                 message = f"Invalid target_var: '{target_var}', does not exist in model_data_view." ,
                 invalid = ["target_var"]
             )
+        
+        if target_var == offset_var in cols:
+            return get_error_json(
+                message = f"Invalid target_var: '{target_var}', cannot be same as offset_var '{offset_var}'." ,
+                invalid = ["target_var"]
+            )
 
     predictor_cols = list(cols.difference(set([offset_var, target_var, "DATASET"])))
+
+    target_var = target_var.upper()
+    offset_var = offset_var.upper()
 
     # create the prompt
     modeling_prompt = ModelingPrompt(
